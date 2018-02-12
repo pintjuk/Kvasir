@@ -1,0 +1,6 @@
+[submodule "docs_daniils/proposal"]
+	path = docs_daniils/proposal
+	url = https://git.overleaf.com/12200897xqnytrqfffkx
+[submodule "docs_daniils/spec"]
+	path = docs_daniils/spec
+	url = https://git.overleaf.com/13496952nbdhzvdfthzd

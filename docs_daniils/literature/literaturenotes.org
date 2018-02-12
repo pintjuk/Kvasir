@@ -1,0 +1,222 @@
+#+TODO: UNREAD(u)  SKIMMED(s) | READ(r)
+
+* Literature Notes
+** On model testing
+**** UNREAD Randomised testing of a microprocessor model using SMT-solver state generation
+@article{CampbellBrian2016Rtoa,
+    issn = "0167-6423",
+    abstract = "We validate a HOL4 model of the ARM Cortex-M0 microcontroller core by testing the model's behaviour on randomly chosen instructions against real chips from several manufacturers.The model and our intended application involve precise timing information about instruction execution, but the implementations are pipelined, so checking the behaviour of single instructions would not give us sufficient confidence in the model. Thus we test the model using sequences of randomly chosen instructions.The main challenge is to meet the constraints on the initial and intermediate execution states: we must ensure that memory accesses are in range and that we respect restrictions on the instructions. By careful transformation of these constraints an off-the-shelf SMT solver can be used to find suitable states for executing test sequences. We also use additional constraints to test our hypotheses about the timing anomalies encountered. •We test a formal microprocessor model using randomly chosen instruction sequences.•SMT constraint solving provides processor and memory states for fault-free execution.•Successfully tested against several chips and identified minor timing anomalies.•Checked hypotheses for timing anomalies by supplying additional constraints.",
+    journal = "Science of Computer Programming",
+    pages = "60--76",
+    volume = "118",
+    publisher = "Elsevier B.V.",
+    year = "2016",
+    title = "Randomised testing of a microprocessor model using SMT-solver state generation",
+    language = "eng",
+    author = "Campbell, Brian and Stark, Ian",
+    keywords = "Randomised Testing ; Microprocessor Models ; Hol ; Smt",
+    month = "March",
+}
+
+
+** On logics
+*** On concuresy modeling and verification
+
+**** UNREAD Modular verification of software components in C
+@article{chaki2004modular,
+  title={Modular verification of software components in C},
+  author={Chaki, Sagar and Clarke, Edmund M and Groce, Alex and Jha, Somesh and Veith, Helmut},
+  journal={IEEE Transactions on Software Engineering},
+  volume={30},
+  number={6},
+  pages={388--402},
+  year={2004},
+  publisher={IEEE}
+}
+
+
+**** UNREAD Modular verification of concurrent assembly code with dynamic thread creation and termination
+@article{feng2005modular,
+  title={Modular verification of concurrent assembly code with dynamic thread creation and termination},
+  author={Feng, Xinyu and Shao, Zhong},
+  journal={ACM SIGPLAN Notices},
+  volume={40},
+  number={9},
+  pages={254--267},
+  year={2005},
+  publisher={ACM}
+}
+
+**** UNREAD Temporal logic of actionsn by L.Lamport
+@article{lamport1994temporal,
+  title={The temporal logic of actions},
+  author={Lamport, Leslie},
+  journal={ACM Transactions on Programming Languages and Systems (TOPLAS)},
+  volume={16},
+  number={3},
+  pages={872--923},
+  year={1994},
+  publisher={ACM}
+}
+
+**** UNREAD Resources, concurrency, and local reasoning
+@article{o2007resources,
+  title={Resources, concurrency, and local reasoning},
+  author={O’hearn, Peter W},
+  journal={Theoretical computer science},
+  volume={375},
+  number={1-3},
+  pages={271--307},
+  year={2007},
+  publisher={Elsevier}
+}
+
+
+*** On Houre logic
+**** READ Semantics with applications by Flemming Nielson and Hanne Riis Nielson, chapter 9 and chapter 10
+there are some good exercises here, i should go over them with adam
+
+@article{nielson2007semantics,
+  title={Semantics with applications},
+  author={Nielson, Hanne Riis and Nielson, Flemming},
+  journal={An Appetizer: Springer Verlag London Ltd},
+  year={2007},
+  publisher={Springer}
+}
+
+**** READ A Hoare logic for realistically modelled machine code
+
+@inproceedings{myreen2007hoare,
+  title={Hoare logic for realistically modelled machine code},
+  author={Myreen, Magnus O and Gordon, Michael JC},
+  booktitle={International Conference on Tools and Algorithms for the Construction and Analysis of Systems},
+  pages={568--582},
+  year={2007},
+  organization={Springer}
+}
+
+**** READ A Hoare logic for ARM machine code,
+
+i should prove some of the examples in this paper and the companion paper as exercise
+
+@inproceedings{myreen2007hoare,
+  title={Hoare logic for ARM machine code},
+  author={Myreen, Magnus O and Fox, Anthony CJ and Gordon, Michael JC},
+  booktitle={International Conference on Fundamentals of Software Engineering},
+  pages={272--286},
+  year={2007},
+  organization={Springer}
+}
+
+
+
+*** On separation logic
+**** READ Separation Logic: A Logic for Shared Mutable Data Structures, John Reynolds, LICS'02
+I think this is the one i read a long time ago
+@inproceedings{reynolds2002separation,
+  title={Separation logic: A logic for shared mutable data structures},
+  author={Reynolds, John C},
+  booktitle={Logic in Computer Science, 2002. Proceedings. 17th Annual IEEE Symposium on},
+  pages={55--74},
+  year={2002},
+  organization={IEEE}
+}
+
+**** UNREAD Smallfoot: Modular Automatic Assertion Checking with Separation Logic, FMCO'05
+
+*** On information flow analysis
+*** Other stuff
+**** UNREAD [#C] Partial functions in ACL2
+@article{manolios2003partial,
+  title={Partial functions in ACL2},
+  author={Manolios, Panagiotis and Moore, J Strother},
+  journal={Journal of Automated Reasoning},
+  volume={31},
+  number={2},
+  pages={107--127},
+  year={2003},
+  publisher={Springer}
+}
+
+probably not that relevent, but contains something interesting about autamaticallyproving equivelence between looping machine code and tail recursive functions. could be usefull for understanding the decompiler
+
+** ARM Model
+**** SKIMMED formal specification and varification of ARM6
+@inproceedings{fox2003formal,
+  title={Formal specification and verification of ARM6},
+  author={Fox, Anthony},
+  booktitle={International Conference on Theorem Proving in Higher Order Logics},
+  pages={25--40},
+  year={2003},
+  organization={Springer}
+}
+
+
+
+** Decompelation into logic
+
+**** HOL/examplesl/mc-logic
+decompilation project source
+
+**** SKIMMED Machine-code verification for multiple architectures
+read through this, did not focus on understanding ditails,
+
+I should read up on spearation logic and haur logic for realistically modelled machine code, play with the decompiler and models and then return to rea reading this and focusincg on understanding the details
+
+
+** Paripheral modeling
+*** synchronious models for timing
+
+**** SKIMMED Correctness Proofs for Device Drivers in Embedded Systems
+    @inproceedings{duan2010correctness,
+        title={Correctness Proofs for Device Drivers in Embedded Systems.},
+        author={Duan, Jianjun and Regehr, John},
+        booktitle={SSV},
+        year={2010}
+    }
+
+*** Asynchronious interleaving models
+
+**** UNREAD Formal device and programming model for a serial interface
+    @inproceedings{alkassar2007formal,
+        title={Formal device and programming model for a serial interface},
+        author={Alkassar, Eyad and Hillebrand, Mark and Knapp, Steffen and Rusev, Rostislav and Tverdyshev, Sergey},
+        booktitle={Proceedings, 4th International Verification Workshop (VERIFY), Bremen, Germany},
+        volume={259},
+        pages={4--20},
+        year={2007}
+    }
+
+**** UNREAD Formal Functional Verification of Device Drivers.
+    @article{alkassar2008formal,
+        title={Formal Functional Verification of Device Drivers.},
+        author={Alkassar, Eyad and Hillebrand, Mark A},
+        journal={VSTTE},
+        volume={8},
+        pages={225--239},
+        year={2008},
+        publisher={Springer}
+    }
+
+**** UNREAD Verification of device drivers and intelligent controllers: a case study
+    @inproceedings{monniaux2007verification,
+        title={Verification of device drivers and intelligent controllers: a case study},
+        author={Monniaux, David},
+        booktitle={Proceedings of the 7th ACM \& IEEE international conference on Embedded software},
+        pages={30--36},
+        year={2007},
+        organization={ACM}
+    }
+
+** modeling and varification, using decompilation tool in HOL
+*** UNREAD [#B] Reusable verification of a copying collector by M.O.Myreen
+I might read this in order to get a deeper understanding for how profs are developed with this decompaltaion tool.
+
+** Some general modeling+verification papers
+this papers do not seam to be specifically related to the task at hand, but could be interesting to add for the sake of getting vices
+
+**** UNREAD [#C] IronFleet: Proving Practical Distributed Systems Correct, Hawblitzel, Howell, Kapritsos, Lorch, Parno, Roberts, Setty, Zill, SOSP'15
+**** UNREAD [#C] Joachim Parrow: An introduction to the pi-calculus, in Handbook of Process Algebra, ed. Bergstra, Ponse, Smolka
+**** UNREAD [#C] Sela Mador-Haim, Luc Maranget, Susmit Sarkar, Scott Owens, Jade Alglave, Kayvan Memarian, Rajeev Alur, Milo Martin, Peter Sewell and Derek Williams, An Axiomatic Memory Model for Power Multiprocessors, CAV'12
+**** UNREAD [#C] Ashutosh Gupta, Corneliu Popeea and Andrey Rybalchenko, Threader: A Constraint-based Verifier for Multi-Threaded Programs, in CAV'11
+**** UNREAD [#C] CertiKOS: An Extensible Architecture for Building Certified Concurrent OS Kernels (Länkar till en externa sida.)Länkar till en externa sida., Ronghui Gu, Zhong Shao, Hao Chen, Xiongnan (Newman) Wu, Jieung Kim, Vilhelm Sjöberg, and David Costanzo; Yale University, OSDI'16
