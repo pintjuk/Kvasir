@@ -2,7 +2,7 @@ ARMGNU = arm-none-eabi
 #ARMGNU = arm-linux-gnueabi
 
 AOPS = --warn --fatal-warnings -mcpu=cortex-m0
-COPS = -Wall -Os -nostdlib -nostartfiles -ffreestanding -mcpu=cortex-m0
+COPS = -std=gnu11 -Wall -Os -nostdlib -nostartfiles -ffreestanding -mcpu=cortex-m0
 
 # optimize whole program getting rid of e.g. auxiliary functions
 #COPS += -fwhole-program

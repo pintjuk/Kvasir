@@ -1,4 +1,9 @@
 ### C ###
+
+# more vim and emacs stuff
+
+**/\#*
+
 # Prerequisites
 *.d
 
