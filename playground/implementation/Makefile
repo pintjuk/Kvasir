@@ -2,45 +2,50 @@ ARMGNU = arm-none-eabi
 #ARMGNU = arm-linux-gnueabi
 
 
-
+PROJECT_NAME = kvasir
+AUTHORS = Daniil-Pintjuk Adam-Johansson
 AOPS = --warn --fatal-warnings -mcpu=cortex-m0
 COPS = -std=gnu11 -Wall -Os -nostdlib -nostartfiles -ffreestanding -mcpu=cortex-m0
+FILES = uart crypto
+BUILD_DIR = build
+SORCE_DIR = src
+BUILD_PROJECT_NAME=$(BUILD_DIR)/$(PROJECT_NAME)
+ASM_DIR = asm
+OBJECTS = $(foreach F,  $(FILES), $(BUILD_DIR)/$(F).o)
+ASMS = $(foreach F,  $(FILES), $(ASM_DIR)/$(F).asm)
 
 # optimize whole program getting rid of e.g. auxiliary functions
 #COPS += -fwhole-program
 
-all : asm build kvasir.bin asm/main.asm asm/uart.asm asm/crypto.asm
+all : $(ASM_DIR) $(BUILD_DIR) $(PROJECT_NAME).bin $(ASM_DIR)/main.asm $(ASMS) $(BUILD_DIR)/main.o $(OBJECTS)
 
 clean:
-	rm -f *.bin *~ *.o *.elf *.list *.asm asm/* build/*
+	rm -f *.bin *~ *.o *.elf *.list *.asm $(ASM_DIR)/* $(BUILD_DIR)/*
 
-asm:
-	mkdir asm
-build:
-	mkdir build
+$(ASM_DIR):
+	mkdir $@
+$(BUILD_DIR):
+	mkdir $@
 #---------------------------------
 
-build/flash.o : flash.s
-	$(ARMGNU)-as $(AOPS) flash.s -o build/flash.o
+$(BUILD_DIR)/flash.o : $(SORCE_DIR)/flash.s
+	$(ARMGNU)-as $(AOPS) $< -o $@
 
-build/main.o : main.c
-	$(ARMGNU)-gcc $(COPS) -mthumb -c main.c -o build/main.o
-build/uart.o : uart.c uart.h
-	$(ARMGNU)-gcc $(COPS) -mthumb -c uart.c -o build/uart.o
-build/crypto.o : crypto.c crypto.h
-	$(ARMGNU)-gcc $(COPS) -mthumb -c crypto.c -o build/crypto.o
+$(BUILD_DIR)/main.o : $(SORCE_DIR)/main.c
+	$(ARMGNU)-gcc $(COPS) -mthumb -c $< -o $@
 
-asm/main.asm : main.c
-	$(ARMGNU)-gcc $(COPS) -mthumb -S -c main.c -o asm/main.asm
-asm/uart.asm : uart.c uart.h
-	$(ARMGNU)-gcc $(COPS) -mthumb -S -c uart.c -o asm/uart.asm
+$(OBJECTS): $(BUILD_DIR)/%.o : $(SORCE_DIR)/%.c $(SORCE_DIR)/%.h
+	$(ARMGNU)-gcc $(COPS) -mthumb -c $< -o $@
 
-asm/crypto.asm : crypto.c crypto.h
-	$(ARMGNU)-gcc $(COPS) -mthumb -S -c crypto.c -o asm/crypto.asm
+$(ASM_DIR)/main.asm : $(SORCE_DIR)/main.c
+	$(ARMGNU)-gcc $(COPS) -mthumb -S -c $< -o $@
 
-kvasir.bin : flash.ld build/flash.o build/main.o build/uart.o build/crypto.o
-	$(ARMGNU)-ld -o build/kvasir.elf -T flash.ld build/flash.o build/main.o build/uart.o build/crypto.o
-	$(ARMGNU)-objdump -d build/kvasir.elf > build/kvasir.list
-	$(ARMGNU)-objdump -j .rodata -s build/kvasir.elf >> build/kvasir.list
-	$(ARMGNU)-objcopy build/kvasir.elf build/kvasir.bin -O binary
-	cp build/kvasir.bin kvasir.bin 
+$(ASMS): $(ASM_DIR)/%.asm : $(SORCE_DIR)/%.c $(SORCE_DIR)/%.h
+	$(ARMGNU)-gcc $(COPS) -mthumb -S -c $< -o $@
+
+$(PROJECT_NAME).bin : $(SORCE_DIR)/flash.ld $(BUILD_DIR)/flash.o $(BUILD_DIR)/main.o $(OBJECTS)
+	$(ARMGNU)-ld -o $(BUILD_PROJECT_NAME).elf -T $^
+	$(ARMGNU)-objdump -d $(BUILD_PROJECT_NAME).elf > $(BUILD_PROJECT_NAME).list
+	$(ARMGNU)-objdump -j .rodata -s $(BUILD_PROJECT_NAME).elf >> $(BUILD_PROJECT_NAME).list
+	$(ARMGNU)-objcopy $(BUILD_PROJECT_NAME).elf $(BUILD_PROJECT_NAME).elf -O binary
+	cp $(BUILD_PROJECT_NAME).elf $@
