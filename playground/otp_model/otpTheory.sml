@@ -1,12 +1,17 @@
 open HolKernel Parse boolLib bossLib;
 open wordsTheory bitstringTheory;
-open BasicProvers
-open markerLib
+open BasicProvers;
+open markerLib;
 open wordsLib;
+open whileTheory;
+open numLib;
+DB.find "word_xor"
+
 
 val _ = new_theory "otpModel";
 
 val _ = type_abbrev("byte", ``:bool[8]``);
+val _ = type_abbrev("otp_input_stream", ``:num -> byte``);
 val _ = type_abbrev("otp_input_stream", ``:num -> byte``);
 val _ = type_abbrev("otp_key_stream", ``:num -> byte``);
 val _ = type_abbrev("otp_output_stream", ``:num -> byte``);
@@ -19,7 +24,6 @@ otp_phi_start (I:otp_input_stream) (k:num) =
  (~(word_msb (I (k + 6)))) /\ (~(word_msb (I (k + 7)))) /\
  (~(word_msb (I (k + 8)))) /\ (~(word_msb (I (k + 9))))
 `;
-
 
 
 val example_input_def = Define `
@@ -82,8 +86,152 @@ otp_phi_msg (I:otp_input_stream) k =
   (?k'. (k-9 <= k') /\ (k' <= k) /\ (starts k'))
 `;
 
-val thm1 = EVAL ``MAP (otp_phi_msg example_input)
+
+val otp_count_marked_def = Define `
+(otp_count_marked b x = (if (x<>0) then (otp_count_marked b (x-1)) else 0) + 
+                        (if (b x) then 1 else 0))
+`;
+
+val otp_Pi'_def0 = Define `
+otp_Pi' (b:(num-> bool)) (x:num) =
+    let l =  \i.( (b i) /\ ((otp_count_marked b i) = (x+1))) in 
+        if ?i. (l i) 
+           then LEAST i. (l i) 
+           else ARB
+`;
+
+val otp_Pi'_def1 = Define `
+otp_Pi' (b:(num-> bool)) (x:num) =
+    let l =  \i.( (b i) /\ ((otp_count_marked b i) = (x+1))) in 
+           LEAST i. (l i) 
+`;
+
+val otp_Pi'_def3 = Define `
+otp_Pi' (b:(num-> bool)) (x:num) =
+    let l =  \i.( (b i) /\ ((otp_count_marked b i) = (x+1))) in 
+           OLEAST i. (l i) 
+`;
+
+val otp_Pi_def = Define`
+    otp_Pi (I:otp_input_stream) = I o (otp_Pi' (otp_phi_msg I))
+`
+
+val otp_encrypt_def = Define `
+    otp_encrypt (I:otp_input_stream) = I o (otp_Pi'(otp_phi_msg I))
+`
+EVAL ``2 MOD 2``
+
+val otp_phi_start_del = Define `
+otp_phi_start (I:otp_input_stream) (k:num) =
+ (word_msb (I k)) /\ (word_msb (I (k + 1))) /\
+ (~(word_msb (I (k + 2)))) /\ (~(word_msb (I (k + 3)))) /\
+ (~(word_msb (I (k + 4)))) /\ (~(word_msb (I (k + 5)))) /\
+ (~(word_msb (I (k + 6)))) /\ (~(word_msb (I (k + 7)))) /\
+ (~(word_msb (I (k + 8)))) /\ (~(word_msb (I (k + 9))))
+`;
+
+
+Val thm1 = EVAL ``MAP (otp_phi_msg example_input)
 [0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15; 16; 17; 18; 19; 20; 21]``
+
+EVAL ``((otp_Pi' (otp_phi_msg example_input) 1)) = 1``
+
+
+EXISTS_TAC ``0``
+ASM_SIMP_TAC std_ss [otp_phi_msg_def, otp_phi_start_del, otp_Pi'_def1, example_input_def] 
+
+
+ASM_SIMP_TAC (std_ss++LET_ss) [otp_Pi'_def1] >>
+LEAST_ELIM_TAC  
+
+STRIP_TAC 
+>- (
+    EXISTS_TAC ``1``>>
+   SIMP_TAC (bool_ss++ARITH_ss++WORD_ss++LET_ss) [ otp_phi_msg_def, example_input_def]>>
+   EXISTS_TAC ``0``
+CONJ_TAC
+
+   SIMP_TAC (bool_ss++ARITH_ss++WORD_ss++LET_ss) [ otp_phi_msg_def, example_input_def, otp_phi_start_del]>>
+ONCE_REWRITE_TAC [otp_count_marked_def]>>
+
+
+   SIMP_TAC (bool_ss++ARITH_ss++WORD_ss++LET_ss) [ otp_phi_msg_def, example_input_def]>>
+   SIMP_TAC (bool_ss++ARITH_ss++WORD_ss++LET_ss) [ otp_phi_msg_def, example_input_def, otp_phi_start_del]>>
+)>>
+ 
+cheat
+
+(** ***)
+
+SIMP_TAC bool_ss []
+Cases_on `n'` >> SIMP_TAC arith_ss []
+DISJ1_TAC
+Q.EXISTS_TAC `1`
+
+REPEAT STRIP_TAC
+GEN_TAC
+CONJ_TAC
+
+ASM_SIMP_TAC arith_ss []
+ASM_SIMP_TAC arith_ss []
+EVAL_TAC
+Induct_on `n'`
+
+
+
+EVAL_TAC
+LET_ELIM_TAC>>
+UNABBREV_ALL_TAC>>
+Tactical.REVERSE ( IF_CASES_TAC ) >>
+
+LEAST_ELIM_TAC  
+EXISTS_TAC ``0``
+STRIP_TAC
+
+REWRITE_TAC [G_SYM LEAST_ELIM]
+ONCE_REWRITE_TAC [WHILE_DEF]
+ASM_SIMP_TAC bool_ss []
+DB.find "LEAST_THM"
+Q.PAT_X_ASSUM `_` (  fn x=> 
+    MP_TAC (
+    Q.SPEC  `2`( 
+	REWRITE_RULE [NOT_EXISTS_THM] x)
+
+    )
+)
+SIMP_TAC std_ss [example_input_def, otp_phi_msg_def] 
+EVAL_TAC
+
+
+(** **)
+Q.PAT_X_ASSUM `_` (  fn x=> 
+    MP_TAC (
+    Q.SPEC  `0`( 
+	Ho_Rewrite.REWRITE_RULE [NOT_EXISTS_THM] x
+    )
+    )
+)>>
+EVAL_TAC
+
+
+Q.PAT_X_ASSUM `_` ( MP_TAC ) >>
+
+
+ONCE_REWRITE_TAC [otp_count_marked_def]
+ONCE_REWRITE_TAC [thm1]
+
+SIMP_TAC std_ss []
+STRIP_TAC
+
+ASM_SIMP_TAC std_ss [NOT_EXISTS_THM]
+
+EN_TAC (`2`)
+SIMP_TAC std_ss [example_input_def] 
+
+ASM_SIMP_TAC std_ss []
+Tactical.REVERSE
+
+help "goal_rev"
 
 val thm1 = prove( ``(MAP (otp_phi_msg example_input)
 [0; 1; 2; 3]) =
@@ -99,7 +247,8 @@ val thm1 = prove( ``(MAP (otp_phi_msg example_input)
  )
 )
 
-DB.find  "Abbrev"
+
+
 
 val thm1 = EVAL ``otp_phi_start example_input 0``;
 val thm1 = EVAL ``otp_phi_start example_input 10``;
