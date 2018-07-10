@@ -1,41 +1,63 @@
 loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/model"::(!loadPath));
 loadPath := ("/Home/daniil/HOL/examples/l3-machine-code/common"::(!loadPath));
+loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/decompiler"::(!loadPath));
 open  wordsTheory;
+open m0Theory;
+open m0_decompLib;
+open fcpTheory;
+
 
 val _ = new_theory "uartModel";
 
-DB.find "m0_state"
+(*
+
+DB.find "Next"
+DB.find "SEP_REFINE_def"
+DB.find "SPEC_def"
+DB.find "m0_MODEL"
+
+DB.find  "STATE_def"
+DB.find  "CODE_POOL"
+DB.find  "m0_instr"
+
+DB.match ["m0_prog"] ``_``
+
+DB.find "m0_state_typedef"
+DB.find "m0_state_induct"
+*)
+
 
 (*********************************)
 (*   buffer model                *)
 (*********************************)
-val _= Datatype `buffer = <| data: word32 list;
-                              cap:num; |>`
+val _= Datatype `buffer = <| data: word32 ['n];
+                              h:num;
+                              t:num;
+                              size:num;
+                              cap:num; |>`;
 
 val bufferN_def = Define `
-bufferN (n:num) = <| data:= []; cap:=6|> 
-`;
+Buffer (:'n) = <| data := (FCP i. 0w):word32['n];
+                  h:=0; t:=0; size:= 0;
+                  cap:=dimindex(:'n); |>`;
+
 val Pop_def = Define `
-Pop buf = if (LENGTH buf.data > 0) 
-          then ((* Result: *)
-                SOME (HD buf.data),
-                (* Next  buffer state:*) 
-                SOME (buf with data updated_by (DROP 1))) 
-          else (NONE, NONE) 
-`;
+Pop  buf =  ((* Result: *)
+                (buf.data ' buf.t),
+             (* Next  buffer state:*) 
+                (buf with <|  t updated_by SUC;  
+                                   size updated_by PRE|>))`;
+
 val Push_def = Define `
-Push (el:word32) (buf:buffer)  = if (LENGTH buf.data < buf.cap) 
-          then (NONE, SOME ((* Next  buffer state:*) 
-                       buf with data updated_by (SNOC el))) 
-          else (NONE, NONE) 
+Push el buf  =  buf with <| data updated_by ( (buf.h MOD buf.cap) :+ el);
+                            h    updated_by SUC ;
+                            size updated_by  SUC ;|>
 `;
 
 val option_fapply2 = Define `
 ((ofap f  NONE) = NONE) /\
 ((ofap f (SOME x)) = (f x))
 `;
-
-
 
 val option_fapply2 = Define `
 ((A f (out0, NONE)) = (out0,NONE)) /\
@@ -45,24 +67,17 @@ in if out1 = NONE
    then  (out0, next)
    else  ([THE out1] ++ out0, next))  `;
 
-EVAL `` ([],SOME (bufferN 5)) :>A (Push 1w)
-                              :>A (Push 2w)
-                              :>A (Push 2w)
-                              :>A (Push 2w)
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
-                              :>A Pop 
- ``;
+EVAL ``     Buffer (:5)   :> (Push 1w)
+                          :> (Push 2w)
+                          :> (Push 3w)
+                          :> (Push 4w)
+                          :> (Push 5w)
+                          :> (Push 6w)
+                          :> Pop
+                          :> \(x,y). y
+                          :> Pop``
 
 val option_testbuffer = Define  `testbuf= <| data:=[0w;1w;2w;3w];cap:=6|>`;
-
 
 (***********************************************)
 (*      uart                                   *)
@@ -77,8 +92,7 @@ val _= Datatype `uart_state = <|enabled: bool;
 				TXDRDY: bool;
                                 PINSELRXD: word32;
                                 PINSELTXD:word32;
-                                RBUF:buffer;
-				TBUF:buffer;
+                                RBUF:'n buffer ;
                                 transmit: bool;
                                 rxd_cleared: bool;
                                 |>`;
@@ -142,7 +156,7 @@ val nRF51_uart_mmap_def   = Define`
     (nRF51_uart_mmap CONFIG = 0x4000256Cw)`;
 
 val nRF51_uart_mmap'_def   = Define`
-    nRF51_uart_mmap addr=
+    nRF51_uart_mmap' addr=
 	if      addr = 0x40002000w  then SOME STARTRX 
 	else if addr = 0x40002004w then SOME STOPRX 
 	else if addr = 0x40002008w then SOME STARTTX
@@ -235,20 +249,11 @@ val nRF51_uart_initial_state_def   = Define`
 	TXDRDY:=F;
 	PINSELRXD:=0w;
 	PINSELTXD:=0w;
-	RBUF:= (bufferN 6);
-	TBUF:= (bufferN 6);
+	RBUF:= (Buffer (:6));
         transmit:=F;
         rxd_cleared:=F;
 |>`;
 
-val uart_pop_tbuf_def = Define `
- uart_pop_tbuf uart =
- let
-   (r, n) =  Pop uart.TBUF;
- in if n = NONE 
-    then  (NONE, NONE)
-    else  (r, SOME( uart with TBUF updated_by (\x. THE n)))
-`;
 
 val uart_pop_rbuf_def = Define `
  uart_pop_rbuf uart =
@@ -260,17 +265,6 @@ val uart_pop_rbuf_def = Define `
 `;
 
 
-val uart_push_tbuf_def = Define `
- uart_push_tbuf w uart =
- let
-   (r, n) =  Push w uart.TBUF
- in if n = NONE 
-    then  (NONE, NONE)
-    else  (r, SOME( uart with TBUF updated_by (\x. THE n)))
-`;
-
-
-
 
 val uart_push_rbuf_def = Define `
  uart_push_rbuf w uart =
@@ -280,17 +274,6 @@ val uart_push_rbuf_def = Define `
     then  (NONE, NONE)
     else  (r, SOME( uart with RBUF updated_by (\x. THE n)))
 `;
-
-
-
-val uart_push_pop_test = EVAL ``
-    (nRF51_uart_initial_state)
-	:> (uart_push_rbuf 100w) 
-	:> (ofap (uart_push_rbuf 101w))
-	:> (ofap (uart_push_tbuf 101w))
-	:> (ofap uart_pop_rbuf) 
-	:> (ofap (\x,y.SOME y))
-	:> (ofap uart_pop_rbuf)``;
 
 val uart_next_cpu_def = Define`
     uart_next_cpu event uart = 
@@ -358,7 +341,8 @@ val uart_next_cpu_def = Define`
 		   |LOAD w CONFIG => NONE
 `;
 
-val uart_next_io_def = Define `
+
+uart_next_io_def = Define `
     uart_next_io (input:word32 option) uart =
         case input of 
             NONE => if uart.transmit 
@@ -366,7 +350,7 @@ val uart_next_io_def = Define `
                                                       transmit:=F; 
                                                       TXDRDY:=T|>)
                     else (NONE, uart)   
-          | SOME w => (NONE, uart
+          | SOME w => (NONE, uart)
 
 )`
 
@@ -374,16 +358,18 @@ val uart_next_io_def = Define `
 (* TODO *)
 val load_uart_register_def = Define`
 load_uart_register uart reg (cpu:m0_state) = cpu
-`
+`;
 
 (* TODO *)
-val addres_def= Define`
-addres n m s = 0w 
-`; 
+val addres_def = Define`
+addres n m state = let 
+    (v,s) = case m of
+                immediate_form imm32 => (imm32, state)
+              | register_form m =>
+                  Shift (R m state,SRType_LSL,0,state.PSR.C) state 
 
-
-(* TODO *)
-
+(** Model definition using Fetch-Decode to detect transition type  **)
+(* TODO: finissh definiton *)
 val cpu_next_def Define`
    cpu_next cpu uart = in
      ( v, s ) = Fetch cpu;
@@ -399,57 +385,146 @@ val cpu_next_def Define`
      Data a => (SUME (next cpu), SEME uart) 
      w => (NONE, NONE) 
 `;
-(**
 
-(* Determin tensition type *)
+(** Model using information flow to detect transition type **)
 
-PCatLoad add state = let 
-  (v,s) = Fetch state ; 
-  (v,s) = Decode v s;
+val is_uart_reg_addr_def = Define`
+(* TODO: change to bit masking? *)
+is_uart_reg_addr (addr:'a word) = (addr >= 0x40002000w /\ addr <= 0x4000256Cw)
+`;
+
+(*
+val load_uart_reg_def = Define `
+load_uart_reg s = let
+    ( v, s) = Fetch s;
+    ( v, s) = Decode v s;
+in ?t n m. (v  = Load  (LoadWord  ( t, n, m))) /\
+    ( is_uart_reg_addr (addres n m s) )
+(* TODO: extend to cover other loads eg load type *)
+`;
+
+
+val load_uart_reg2_def = Define `
+(*not sure if cases or exists is better*)
+load_uart_reg2 s = let
+    ( v, s) = Fetch s;
+    ( v, s) = Decode v s;
 in case v of 
-  Load (LoadWord (t,n,m))) => let
-    (v,s) = case m of
-          immediate_form imm32 => (imm32,state)
-	| register_form m =>
-	    Shift (R m state,SRType_LSL,0,state.PSR.C) s ;
-    in (v=add)
-  |_=> F;
+    (Load  (LoadWord  ( t, n, m))) => ( is_uart_reg_addr (addres n m s) )
+   |x => F
+`; *)
+
+val mem_region_eq_def = Define`
+mem_eq region mem1 mem2 = 
+   (!x. x IN region ==> ((mem1 x) = (mem2 x)))
+`
+
+val m0_region_eq_def = Define `
+m0_region_eq region s1 s2 = 
+   (mem_eq region s1.MEM s2.MEM)
+`
+DB.find "m0_state"
+val m0_non_region_eq_def = Define `
+  m0_non_uart_eq s1 s2 = (
+
+(s1.AIRCR = s2.AIRCR)/\
+(s1.CCR = s2.CCR)/\
+(s1.CONTROL = s2.CONTROL)/\
+(s1.CurrentMode = s2.CurrentMode)/\
+ExceptionActive
+NVIC_IPR
+PRIMASK
+PSR
+REG
+SHPR2
+SHPR3
+VTOR
+count
+exception
+pcinc
+pending
+
+   (a.REG = b.REG) /\ (a.count = b.count) /\ (non_uart_mem_eq a.MEM b.MEM)
+   (* Do we need to include other parts of the state ?, yes*)
+  )
+`;
+
+val m0_non_uart_eq_def = Define `
+  m0_non_uart_eq a b = (
+   (a.REG = b.REG) /\ (a.count = b.count) /\ (non_uart_mem_eq a.MEM b.MEM)
+   (* Do we need to include other parts of the state ?, yes*)
+  )
+`;
+
+val m0_uart_eq_def = Define `
+  m0_uart_eq a b = 
+    (uart_mem_eq a.MEM b.MEM)
+`;
 
 
-PCatStore add state = let 
-  (v,s) = Fetch state ; 
-  (v,s) = Decode v s;
-in case v of 
-  Store (StoreWord (t,n,m))) => let
-    (v,s) = case m of
-          immediate_form imm32 => (imm32,state)
-	| register_form m =>
-	    Shift (R m state,SRType_LSL,0,state.PSR.C) s ;
-    in (v=add)
-  |_=> F;
+val no_if_uart_2_cpu_def = Define`
+no_if_uart_2_cpu s0 = (
+    ! s1. m0_non_uart_eq s0 s1 ==> m0_non_uart_eq (Next s0) (Next s1)
+)`;
+
+val no_if_cpu_2_uart_def = Define`
+no_if_uart_2_cpu s0 = (
+    (** we need to fex next instruction to be executed, if code is always located in a fixed region of memory then it would be better to constain that memory region instead **)
+    ! s1. (** s1.REG PC = s0.REG PC /\ s0.MEM (R s PC) = s1.MEM(R s' PC) **) => 
+         m0_uart_eq s0 s1 ==> m0_uart_eq (Next s0) (Next s1)
+)`;
+
+val no_if_2_cpu_no_load_thm = prove (`` !s.  no_if_uart_2_cpu s  ==> ~( load_uart_reg s)``,
+STRIP_TAC
+EQ_TAC
+SIMP_TAC std_ss [no_if_uart_2_cpu_def]
+Induct_on `s` 
+Induct_on `f1`
+);
 
 
-PCatArith state = let 
-  (v,s) = Fetch state ; 
-  (v,s) = Decode v s 
-in (?a. v = Data a)
-
-(* next' ~ next *)
-
-(PendingUARTTrans dev) ==> 
-  next' (state, dev) = ( state , uart_next dev)
-  
-(PCatStore state ) ==>
-  next' (state, dev) = ( next state, uart_reg_store (state, dev)) 
-
-(PCatLoad state) ==> 
-  next' (state, dev) = ( next state, uart_reg_load (state, dev)) 
-
-(PCatArith state) ==> next 
-~(PCOnStore state) /\ ~(PCOnLoad state) /\ ~(PCOnArith)==> UNIMPLEMENTED 
+(** experements to investigate proving information flow for decompiled code **)
+val m0_non_addr_eq_def = Define `
+  m0_non_uart_eq addr a b = (
+   (a.REG = b.REG) /\ (a.count = b.count) /\ 
+          (!addr'. (addr' <> addr) ==> ((a.MEM addr')=(b.MEM addr')))
+   (* Do we need to include other parts of the state ?*)
+  )
+`;
 
 
-uart_reg_load
+val m0_addr_eq_def = Define `
+  m0_addr_eq addr a b =
+       (** TODO: might need to fix PC, (s.MEM PC) and regesters used by the instruction at s.MEM PC **)
+    ((a.MEM addr)=(b.MEM addr))
+`;
 
-uart_reg_store (state, dev) = 
-**)
+
+(** this version without ext.quant. **)
+val mem_written_1_def = Define`
+    mem_written_1 s a = let
+      s'  = s with MEM updated_by (\m. (a =+ 0w) m );  
+      s'' = s with MEM updated_by (\m. (a =+ ~0w) m)
+    in ~((((Next(s')).MEM a) = 0w) /\ ( ((Next(s'')).MEM a)=~0w)) 
+`;
+
+(** this version is more in Information flow style**)
+
+
+val nif_from_addr_def = Define`
+    nif_from_addr a s = !s'. (** TODO: 
+                if next operation is fixed!!! ==> **) 
+         m0_addr_eq a s s' ==>
+             m0_addr_eq a (Next s) (Next s')           
+`;
+
+val nif_to_addr_def = Define`
+    nif_to_addr a s = !s'. (** TODO: 
+                if next operation is fixed!!! ==> **) 
+         m0_non_addr_eq a s s' ==>
+             m0_non_addr_eq a (Next s) (Next s')           
+`;
+
+val if_to_addr_def = Define`
+    if_to_addr_def a s = ?s'. (m0_non_addr_eq a s s' ) /\ ~(m0_non_addr_eq a (Next s) (Next s'))
+`;
