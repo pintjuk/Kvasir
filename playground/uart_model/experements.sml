@@ -6,29 +6,6 @@ open  wordsTheory;
 open m0Theory;
 open m0_decompLib;
 open fcpTheory;
-DB.match [] ``x=y ``
-     
-
-EVAL ``(6w):word3``
-
-val (daniil_th, daniil_defs) = m0_decompile "daniil_test" `
-2300 (* movs r3, #0 *)`;
-
-val (daniil_th, daniil_defs) = m0_decompile "daniil_test" `
-f7ff ffe2 (* 	bl	17a <validate_seq_headers>*)`;
-
-
-DB.find "daniil_test_pre";
-
-
-
-
-uart_reg_load
-
-uart_reg_store (state, dev) = 
-DB.find "m0_REG"
-
-
 
 (* test program *)
 val q =
@@ -64,11 +41,14 @@ get_decompiled "test"
  decompiler_memory
 
 (* internal assembler *)
-val () = m0AssemblerLib.print_m0_code q
+val () = m0AssemblerLib.print_m0_code `
 
 m0_decompLib
  derive_individual_specs 
-val (test2_cert, test2_def) = m0_decompile_code "test2" q
+val (test2_cert, test2_def) = m0_decompile_code "test2" `
+	mov	r3, #0  `		
+	lslsne	r0, r0, #3 
+`
 
 val () = computeLib.add_funs [test_def]
 val () = computeLib.add_funs [test2_def]
