@@ -500,3 +500,118 @@ no_if_to_word addr s = no_flow_to ward_region s`;
 
 val no_if_from_word_def = Define`
 no_if_from_word addr s = no_flow_from (ward_region addr) s`;
+=======
+val mem_region_eq_def = Define`
+mem_eq region mem1 mem2 = 
+   (!x. x IN region ==> ((mem1 x) = (mem2 x)))
+`
+
+val m0_region_eq_def = Define `
+m0_region_eq region s1 s2 = 
+   (mem_eq region s1.MEM s2.MEM)
+`
+DB.find "m0_state"
+val m0_non_region_eq_def = Define `
+  m0_non_uart_eq s1 s2 = (
+
+(s1.AIRCR = s2.AIRCR)/\
+(s1.CCR = s2.CCR)/\
+(s1.CONTROL = s2.CONTROL)/\
+(s1.CurrentMode = s2.CurrentMode)/\
+ExceptionActive
+NVIC_IPR
+PRIMASK
+PSR
+REG
+SHPR2
+SHPR3
+VTOR
+count
+exception
+pcinc
+pending
+
+   (a.REG = b.REG) /\ (a.count = b.count) /\ (non_uart_mem_eq a.MEM b.MEM)
+   (* Do we need to include other parts of the state ?, yes*)
+  )
+`;
+
+val m0_non_uart_eq_def = Define `
+  m0_non_uart_eq a b = (
+   (a.REG = b.REG) /\ (a.count = b.count) /\ (non_uart_mem_eq a.MEM b.MEM)
+   (* Do we need to include other parts of the state ?, yes*)
+  )
+`;
+
+val m0_uart_eq_def = Define `
+  m0_uart_eq a b = 
+    (uart_mem_eq a.MEM b.MEM)
+`;
+
+
+val no_if_uart_2_cpu_def = Define`
+no_if_uart_2_cpu s0 = (
+    ! s1. m0_non_uart_eq s0 s1 ==> m0_non_uart_eq (Next s0) (Next s1)
+)`;
+
+val no_if_cpu_2_uart_def = Define`
+no_if_uart_2_cpu s0 = (
+    (** we need to fex next instruction to be executed, if code is always located in a fixed region of memory then it would be better to constain that memory region instead **)
+    ! s1. (** s1.REG PC = s0.REG PC /\ s0.MEM (R s PC) = s1.MEM(R s' PC) **) => 
+         m0_uart_eq s0 s1 ==> m0_uart_eq (Next s0) (Next s1)
+)`;
+
+val no_if_2_cpu_no_load_thm = prove (`` !s.  no_if_uart_2_cpu s  ==> ~( load_uart_reg s)``,
+STRIP_TAC
+EQ_TAC
+SIMP_TAC std_ss [no_if_uart_2_cpu_def]
+Induct_on `s` 
+Induct_on `f1`
+);
+
+
+(** experements to investigate proving information flow for decompiled code **)
+val m0_non_addr_eq_def = Define `
+  m0_non_uart_eq addr a b = (
+   (a.REG = b.REG) /\ (a.count = b.count) /\ 
+          (!addr'. (addr' <> addr) ==> ((a.MEM addr')=(b.MEM addr')))
+   (* Do we need to include other parts of the state ?*)
+  )
+`;
+
+
+val m0_addr_eq_def = Define `
+  m0_addr_eq addr a b =
+       (** TODO: might need to fix PC, (s.MEM PC) and regesters used by the instruction at s.MEM PC **)
+    ((a.MEM addr)=(b.MEM addr))
+`;
+
+
+(** this version without ext.quant. **)
+val mem_written_1_def = Define`
+    mem_written_1 s a = let
+      s'  = s with MEM updated_by (\m. (a =+ 0w) m );  
+      s'' = s with MEM updated_by (\m. (a =+ ~0w) m)
+    in ~((((Next(s')).MEM a) = 0w) /\ ( ((Next(s'')).MEM a)=~0w)) 
+`;
+
+(** this version is more in Information flow style**)
+
+
+val nif_from_addr_def = Define`
+    nif_from_addr a s = !s'. (** TODO: 
+                if next operation is fixed!!! ==> **) 
+         m0_addr_eq a s s' ==>
+             m0_addr_eq a (Next s) (Next s')           
+`;
+
+val nif_to_addr_def = Define`
+    nif_to_addr a s = !s'. (** TODO: 
+                if next operation is fixed!!! ==> **) 
+         m0_non_addr_eq a s s' ==>
+             m0_non_addr_eq a (Next s) (Next s')           
+`;
+
+val if_to_addr_def = Define`
+    if_to_addr_def a s = ?s'. (m0_non_addr_eq a s s' ) /\ ~(m0_non_addr_eq a (Next s) (Next s'))
+`;
