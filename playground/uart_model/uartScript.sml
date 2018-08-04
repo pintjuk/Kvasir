@@ -1,31 +1,17 @@
+(*
 loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/model"::(!loadPath));
 loadPath := ("/Home/daniil/HOL/examples/l3-machine-code/common"::(!loadPath));
-loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/decompiler"::(!loadPath));
-open  wordsTheory;
-open m0Theory;
-open m0_decompLib;
-open fcpTheory;
-
-
-val _ = new_theory "uartModel";
-
-(*
-
-DB.find "Next"
-DB.find "SEP_REFINE_def"
-DB.find "SPEC_def"
-DB.find "m0_MODEL"
-
-DB.find  "STATE_def"
-DB.find  "CODE_POOL"
-DB.find  "m0_instr"
-
-DB.match ["m0_prog"] ``_``
-
-DB.find "m0_state_typedef"
-DB.find "m0_state_induct"
 *)
 
+open HolKernel Parse boolLib;
+open boolSimps;
+open bossLib;
+open wordsTheory;
+open m0Theory;
+open fcpTheory;
+open m0_NITTheory;
+
+val _ = new_theory "uart";
 
 (*********************************)
 (*   buffer model                *)
@@ -54,20 +40,7 @@ Push el buf  =  buf with <| data updated_by ( (buf.h MOD buf.cap) :+ el);
                             size updated_by  SUC ;|>
 `;
 
-val option_fapply2 = Define `
-((ofap f  NONE) = NONE) /\
-((ofap f (SOME x)) = (f x))
-`;
-
-val option_fapply2 = Define `
-((A f (out0, NONE)) = (out0,NONE)) /\
-((A f (out0, SOME x)) = let
-    (out1, next) = f x;
-in if out1 = NONE 
-   then  (out0, next)
-   else  ([THE out1] ++ out0, next))  `;
-
-EVAL ``     Buffer (:5)   :> (Push 1w)
+val  _ = EVAL ``     Buffer (:5)   :> (Push 1w)
                           :> (Push 2w)
                           :> (Push 3w)
                           :> (Push 4w)
@@ -75,15 +48,15 @@ EVAL ``     Buffer (:5)   :> (Push 1w)
                           :> (Push 6w)
                           :> Pop
                           :> \(x,y). y
-                          :> Pop``
+                          :> Pop``;
 
-val option_testbuffer = Define  `testbuf= <| data:=[0w;1w;2w;3w];cap:=6|>`;
 
 (***********************************************)
 (*      uart                                   *)
 (***********************************************)
 
 val _= Datatype `uart_state = <|enabled: bool; 
+				unpredictable:bool;
 		                rx_started: bool; 
                                 tx_started:bool;
                                 RXD: word32;
@@ -92,7 +65,7 @@ val _= Datatype `uart_state = <|enabled: bool;
 				TXDRDY: bool;
                                 PINSELRXD: word32;
                                 PINSELTXD:word32;
-                                RBUF:'n buffer ;
+                                RBUF:6 buffer ;
                                 transmit: bool;
                                 rxd_cleared: bool;
                                 |>`;
@@ -239,7 +212,8 @@ val _= Datatype `uart_mmap = <|
 *)
 
 val nRF51_uart_initial_state_def   = Define`
-    nRF51_uart_initial_state = <|   
+    nRF51_uart_initial_state = <|
+        unpredictable:=F;
 	enabled:= F; 
 	rx_started:= F; 
 	tx_started:= F;
@@ -254,7 +228,7 @@ val nRF51_uart_initial_state_def   = Define`
         rxd_cleared:=F;
 |>`;
 
-
+(*
 val uart_pop_rbuf_def = Define `
  uart_pop_rbuf uart =
  let
@@ -274,6 +248,92 @@ val uart_push_rbuf_def = Define `
     then  (NONE, NONE)
     else  (r, SOME( uart with RBUF updated_by (\x. THE n)))
 `;
+*)
+
+
+(*******************************************)
+(*          UART NIF                       *)
+(*******************************************)
+     
+val m0u_r_eq_def = Define `
+    m0u_r_eq region (s1,u1) (s2,u2) = 
+        m0_r_eq region s1 s2 /\ (u1=u2)
+`;
+
+val m0u_non_r_eq_def = Define `
+    m0u_non_r_eq region (s1,u1) (s2, u2) = 
+        m0_non_r_eq region s1 s2
+` ;
+
+val m0u_m0_non_r_eq_def = Define `
+    m0u_m0_non_r_eq region (s1,u1) s2 = 
+        m0_non_r_eq region s1 s2
+` ;
+
+
+val ward_region_def = Define`
+(* TODO: change to bit masking? *)
+ward_region (x:word32) = {x;x+1w; x+2w;x+3w}
+`;
+
+val uart_r_def = Define`
+uart_r=(ward_region(nRF51_uart_mmap STARTRX) UNION
+ward_region(nRF51_uart_mmap STOPRX) UNION
+ward_region(nRF51_uart_mmap STARTTX) UNION
+ward_region(nRF51_uart_mmap STOPTX) UNION
+ward_region(nRF51_uart_mmap SUSPEND) UNION
+ward_region(nRF51_uart_mmap CTS) UNION
+ward_region(nRF51_uart_mmap NCTS) UNION
+ward_region(nRF51_uart_mmap RXDRDY) UNION
+ward_region(nRF51_uart_mmap TXDRDY) UNION
+ward_region(nRF51_uart_mmap ERROR) UNION
+ward_region(nRF51_uart_mmap RXTO) UNION
+ward_region(nRF51_uart_mmap INTEN) UNION
+ward_region(nRF51_uart_mmap INTENSET) UNION
+ward_region(nRF51_uart_mmap INTENCLR) UNION
+ward_region(nRF51_uart_mmap ERRORSRC) UNION
+ward_region(nRF51_uart_mmap ENABLE) UNION
+ward_region(nRF51_uart_mmap PSELRTS) UNION
+ward_region(nRF51_uart_mmap PSELTXD) UNION
+ward_region(nRF51_uart_mmap PSELCTS) UNION
+ward_region(nRF51_uart_mmap PSELRXD) UNION
+ward_region(nRF51_uart_mmap RXD) UNION
+ward_region(nRF51_uart_mmap TXD) UNION
+ward_region(nRF51_uart_mmap BAUDRATE) UNION
+ward_region(nRF51_uart_mmap CONFIG))`
+
+
+
+(*
+this theorem does not hold sincethere are gaps in uart registers right now 
+
+``uart_r = {addr| addr >= 0x40002000w /\ addr <= (0x4000256Cw+3w)}``
+
+
+ASM_SIMP_TAC (arith_ss++pred_setLib.PRED_SET_ss++wordsLib.WORD_LOGIC_ss  ) [FUN_EQ_THM, uart_r_def, ward_region_def, nRF51_uart_mmap_def] 
+
+
+REPEAT STRIP_TAC>>
+
+
+val tactic1 = (fn x => 
+Cases_on (`x:word32 = `@[QUOTE ((Int.toString x)^"w:word32")])
+>- (ASM_SIMP_TAC std_ss []>> blastLib.FULL_BBLAST_TAC )
+)
+fun tactical1 a b = if a=b 
+    then tactic1 a >> (PAT_X_ASSUM ``_`` MP_TAC) 
+    else (tactic1 a >> 
+          (PAT_X_ASSUM ``_`` MP_TAC) >>
+          (tactical1 (a+1) b))		   
+
+tactical1 (0x40002000) (0x4000200f)
+
+*)
+
+
+(*******************************************)
+(*          NEXT function                  *)
+(*******************************************)
 
 val uart_next_cpu_def = Define`
     uart_next_cpu event uart = 
@@ -341,7 +401,7 @@ val uart_next_cpu_def = Define`
 		   |LOAD w CONFIG => NONE
 `;
 
-
+(*
 uart_next_io_def = Define `
     uart_next_io (input:word32 option) uart =
         case input of 
@@ -352,266 +412,35 @@ uart_next_io_def = Define `
                     else (NONE, uart)   
           | SOME w => (NONE, uart)
 
-)`
-
-
-(* TODO *)
-val load_uart_register_def = Define`
-load_uart_register uart reg (cpu:m0_state) = cpu
-`;
-
-(* TODO *)
-val addres_def = Define`
-addres n m state = let 
-    (v,s) = case m of
-                immediate_form imm32 => (imm32, state)
-              | register_form m =>
-                  Shift (R m state,SRType_LSL,0,state.PSR.C) state 
-
-(** Model definition using Fetch-Decode to detect transition type  **)
-(* TODO: finissh definiton *)
-val cpu_next_def Define`
-   cpu_next cpu uart = in
-     ( v, s ) = Fetch cpu;
-     ( v, s ) = Decode v s;
-   let case s of
-     Load  (LoadWord  ( t, n, m)) => case nRF51_uart_mmap' (addres n m cpu) of
-                                        NONE => ( SOME (next cpu), SOME uart )
-                                        SOME reg =>  ( (* load cpu register*) SOME (next cpu ), uart_next_cpu (LOAD reg) uart )
-
-     Store (StoreWord ( t, n, m)) => case nRF51_uart_mmap' (addres n m cpu) of
-                                        NONE => ( SOME (next cpu), SOME uart )
-                                        SOME reg =>  ( SOME (next cpu ), uart_next_cpu (STORE reg) uart )
-     Data a => (SUME (next cpu), SEME uart) 
-     w => (NONE, NONE) 
-`;
-
-(** Model using information flow to detect transition type **)
-
-val is_uart_reg_addr_def = Define`
-(* TODO: change to bit masking? *)
-is_uart_reg_addr (addr:'a word) = (addr >= 0x40002000w /\ addr <= 0x4000256Cw)
-`;
-
-(*
-val load_uart_reg_def = Define `
-load_uart_reg s = let
-    ( v, s) = Fetch s;
-    ( v, s) = Decode v s;
-in ?t n m. (v  = Load  (LoadWord  ( t, n, m))) /\
-    ( is_uart_reg_addr (addres n m s) )
-(* TODO: extend to cover other loads eg load type *)
-`;
-
-
-val load_uart_reg2_def = Define `
-(*not sure if cases or exists is better*)
-load_uart_reg2 s = let
-    ( v, s) = Fetch s;
-    ( v, s) = Decode v s;
-in case v of 
-    (Load  (LoadWord  ( t, n, m))) => ( is_uart_reg_addr (addres n m s) )
-   |x => F
-`; *)
-
-val mem_eq_def = Define`
-mem_eq region mem1 mem2 = 
-   (!x. x IN region ==> ((mem1 x) = (mem2 x)))
-`;
-
-val m0_r_eq_def = Define `
-m0_r_eq region s1 s2 = 
-   (mem_eq region s1.MEM s2.MEM)
-`;
-
-val m0_non_r_eq_def = Define `
-    m0_non_r_eq region s1 s2 = (
-	(s1.AIRCR = s2.AIRCR)/\
-	(s1.CCR = s2.CCR)/\
-	(s1.CONTROL = s2.CONTROL)/\
-	(s1.CurrentMode = s2.CurrentMode)/\
-	(s1.ExceptionActive = s2.ExceptionActive)/\
-	(s1.NVIC_IPR = s2.NVIC_IPR)/\
-	(s1.PRIMASK = s2.PRIMASK)/\
-	(s1.PSR = s2.PSR)/\
-	(s1.REG = s2.REG)/\
-	(s1.SHPR2 = s2.SHPR2)/\
-	(s1.SHPR3 = s2.SHPR3)/\
-	(s1.VTOR = s2.VTOR)/\
-	(s1.count = s2.count)/\
-	(s1.exception = s2.exception)/\
-	(s1.pcinc = s2.pcinc)/\
-	(s1.pending = s2.pending)/\
-	(mem_eq {x|  x NOTIN region } s1.MEM s2.MEM))`;
-
-
-
-val m0_non_uart_eq_def = Define `
-  m0_non_uart_eq s1 s2 = (m0_non_r_eq uart_region s1 s2)
-`;
-
-
-(** There is no flow to a memory region from the rest of the state 
-    During the next tranisition
-
-    for arbitrary content of the region, the next instruciton does not change the content of the region
-**)
-val no_flow_to_def = Define` 
- no_flow_to region s = (
-  !s'. m0_non_r_eq region s s' ==> m0_r_eq region s' (Next s') 
- )`;
-
-(** There is no information flow to the rest of the state from this region 
-    During the next tranisition 
-    
-    Swaping out the content of the region arbitraraly does not affect the execution of the rest of the state.
-**)
-val no_flow_from_def = Define` 
- no_flow_from region s = (
-  !s'. m0_non_r_eq region s s' ==> m0_r_eq region (Next s) (Next s') 
- )`;
-
-
-
-
-val uart_region_def = Define`
-(* TODO: change to bit masking? *)
-uart_region = {addr| addr >= 0x40002000w /\ addr <= 0x4000256Cw}
-`;
-
-
-val no_if_to_uart_def = Define`
-no_if_to_uart s = no_flow_to uart_region s`;
-
-
-val no_if_from_uart_def = Define`
-no_if_from_uart s = no_flow_from uart_region s`;
-
-
-val ward_region_def = Define`
-(* TODO: change to bit masking? *)
-ward_region x = {addr| (addr = x) \/ (addr = x+1w) \/
-                         (addr = x+2w) \/ (addr = x+3w)}
-`;
-
-val no_if_to_word_def = Define`
-no_if_to_word addr s = no_flow_to ward_region s`;
-
-
-val no_if_from_word_def = Define`
-no_if_from_word addr s = no_flow_from (ward_region addr) s`;
-=======
-val mem_region_eq_def = Define`
-mem_eq region mem1 mem2 = 
-   (!x. x IN region ==> ((mem1 x) = (mem2 x)))
-`
-
-val m0_region_eq_def = Define `
-m0_region_eq region s1 s2 = 
-   (mem_eq region s1.MEM s2.MEM)
-`
-DB.find "m0_state"
-val m0_non_region_eq_def = Define `
-  m0_non_uart_eq s1 s2 = (
-
-(s1.AIRCR = s2.AIRCR)/\
-(s1.CCR = s2.CCR)/\
-(s1.CONTROL = s2.CONTROL)/\
-(s1.CurrentMode = s2.CurrentMode)/\
-ExceptionActive
-NVIC_IPR
-PRIMASK
-PSR
-REG
-SHPR2
-SHPR3
-VTOR
-count
-exception
-pcinc
-pending
-
-   (a.REG = b.REG) /\ (a.count = b.count) /\ (non_uart_mem_eq a.MEM b.MEM)
-   (* Do we need to include other parts of the state ?, yes*)
-  )
-`;
-
-val m0_non_uart_eq_def = Define `
-  m0_non_uart_eq a b = (
-   (a.REG = b.REG) /\ (a.count = b.count) /\ (non_uart_mem_eq a.MEM b.MEM)
-   (* Do we need to include other parts of the state ?, yes*)
-  )
-`;
-
-val m0_uart_eq_def = Define `
-  m0_uart_eq a b = 
-    (uart_mem_eq a.MEM b.MEM)
-`;
-
-
-val no_if_uart_2_cpu_def = Define`
-no_if_uart_2_cpu s0 = (
-    ! s1. m0_non_uart_eq s0 s1 ==> m0_non_uart_eq (Next s0) (Next s1)
 )`;
+*)
 
-val no_if_cpu_2_uart_def = Define`
-no_if_uart_2_cpu s0 = (
-    (** we need to fex next instruction to be executed, if code is always located in a fixed region of memory then it would be better to constain that memory region instead **)
-    ! s1. (** s1.REG PC = s0.REG PC /\ s0.MEM (R s PC) = s1.MEM(R s' PC) **) => 
-         m0_uart_eq s0 s1 ==> m0_uart_eq (Next s0) (Next s1)
-)`;
-
-val no_if_2_cpu_no_load_thm = prove (`` !s.  no_if_uart_2_cpu s  ==> ~( load_uart_reg s)``,
-STRIP_TAC
-EQ_TAC
-SIMP_TAC std_ss [no_if_uart_2_cpu_def]
-Induct_on `s` 
-Induct_on `f1`
-);
+val m0u_Next_def= Define 
+`m0u_Next (((s:m0_state), (u:uart_state)), (input:word32 list), (output:word32 list)) =  
+    if NIT_STEP uart_r s
+    then     ((Next s,u) ,input, output)
+    else  
+(*** IMPLEMENT the actual model
+**)
+((ARB, ARB), ARB, ARB)`
 
 
-(** experements to investigate proving information flow for decompiled code **)
-val m0_non_addr_eq_def = Define `
-  m0_non_uart_eq addr a b = (
-   (a.REG = b.REG) /\ (a.count = b.count) /\ 
-          (!addr'. (addr' <> addr) ==> ((a.MEM addr')=(b.MEM addr')))
-   (* Do we need to include other parts of the state ?*)
-  )
-`;
+(********************************************)
+(*           Uart model theorems            *)
+(********************************************)
+val AXI = Q.store_thm("AXI", `!s su input output.  
+(NIT_STEP uart_r s) /\ (m0u_m0_non_r_eq uart_r su s ) ==>
+let
+    next_s = (Next s);
+    (next_su,next_input, next_output ) = m0u_Next (su,input,output)
+in  (m0u_m0_non_r_eq uart_r next_su next_s ) /\ (m0u_r_eq uart_r next_su su)`,
 
+    REPEAT GEN_TAC>> Cases_on `su`>>
+    SIMP_TAC (std_ss++LET_ss) [m0u_Next_def, m0u_r_eq_def ,m0u_m0_non_r_eq_def, PULL_FORALL, NIT_STEP_TRANS_thm, NIT_STEP_TRANS_thm]>>
+    (MP_TAC o Q.SPECL [`uart_r`, `s`, `q`]) NIT_STEP_TRANS_thm>>
+    REPEAT STRIP_TAC>>
+    FULL_SIMP_TAC std_ss []>>
+    FULL_SIMP_TAC (std_ss++LET_ss) [m0u_Next_def, m0u_r_eq_def ,m0u_m0_non_r_eq_def, PULL_FORALL, NIT_STEP_TRANS_thm, NIT_STEP_TRANS_thm, NIT_STEP_thm]>>
+    METIS_TAC [m0_non_r_eq_refl_thm, m0_r_eq_refl_thm]);
 
-val m0_addr_eq_def = Define `
-  m0_addr_eq addr a b =
-       (** TODO: might need to fix PC, (s.MEM PC) and regesters used by the instruction at s.MEM PC **)
-    ((a.MEM addr)=(b.MEM addr))
-`;
-
-
-(** this version without ext.quant. **)
-val mem_written_1_def = Define`
-    mem_written_1 s a = let
-      s'  = s with MEM updated_by (\m. (a =+ 0w) m );  
-      s'' = s with MEM updated_by (\m. (a =+ ~0w) m)
-    in ~((((Next(s')).MEM a) = 0w) /\ ( ((Next(s'')).MEM a)=~0w)) 
-`;
-
-(** this version is more in Information flow style**)
-
-
-val nif_from_addr_def = Define`
-    nif_from_addr a s = !s'. (** TODO: 
-                if next operation is fixed!!! ==> **) 
-         m0_addr_eq a s s' ==>
-             m0_addr_eq a (Next s) (Next s')           
-`;
-
-val nif_to_addr_def = Define`
-    nif_to_addr a s = !s'. (** TODO: 
-                if next operation is fixed!!! ==> **) 
-         m0_non_addr_eq a s s' ==>
-             m0_non_addr_eq a (Next s) (Next s')           
-`;
-
-val if_to_addr_def = Define`
-    if_to_addr_def a s = ?s'. (m0_non_addr_eq a s s' ) /\ ~(m0_non_addr_eq a (Next s) (Next s'))
-`;
+val _ = export_theory();

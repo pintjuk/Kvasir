@@ -392,3 +392,9 @@ tags
 *.asm
 *.asm
 *.bin
+/playground/uart_model/.HOLMK/lastmaker
+/playground/uart_model/.hollogs/clockTheory.sml
+/playground/uart_model/.hollogs/executionTheory.sml
+/playground/uart_model/.hollogs/m0_NITTheory.sml
+/playground/uart_model/.hollogs/m0_flowTheory.sml
+/playground/uart_model/.hollogs/uartTheory.sml

@@ -34,33 +34,27 @@ open m0_progLib;
 (** separation logic simplification **)
 
 val SEP_CONV =  let 
-    val PULL_CODE_POOL = prove (``(!x inst c.    (x * (CODE_POOL inst c)) = ((CODE_POOL inst c) * x))/\
-	    (!x y inst c.  (x * ((CODE_POOL inst c) * y)) = (CODE_POOL inst c) * (x * y)) ``,
-	SIMP_TAC std_ss [set_sepTheory.STAR_ASSOC]>>
-	SIMP_TAC std_ss [set_sepTheory.STAR_COMM ]
-    );
-    val CODE_POOL_STAR = prove(``! q inst c. CODE_POOL inst c * q = (λs. ∃u v. SPLIT s (u,v) ∧ (CODE_POOL inst c) u ∧ q v)``,
-    SIMP_TAC std_ss [set_sepTheory.STAR_def]
-    );
+    val PULL_CODE_POOL = ONCE_REWRITE_CONV [set_sepTheory.STAR_COMM] ``x * CODE_POOL inst c``;
+    val CODE_POOL_STAR = REWRITE_CONV [set_sepTheory.STAR_def] ``CODE_POOL inst c * q``;
+    val REWRITE_AND_PULL_CODE_POOL_INFRONT = SIMP_CONV (std_ss++boolSimps.LET_ss)  [
+	COUNT_STEPS_def, m0_decompTheory.m0_COUNT_def,
+        m0_progTheory.m0_PC_def, m0_progTheory.m0_PC_def,
+	m0_progTheory.M0_MODEL_def, progTheory.SEP_REFINE_def,
+	PULL_CODE_POOL, stateTheory.NEXT_REL_EQ];
+    val REWRITE_CODE_POOL = SIMP_CONV std_ss [
+        GSYM set_sepTheory.STAR_ASSOC, CODE_POOL_STAR,
+        stateTheory.SPLIT_STATE, m0_select_state_pool_thm,
+        PULL_EXISTS];
+    val REWRITE_REST = SIMP_CONV (std_ss++pred_setLib.PRED_SET_ss) (
+	GSYM CONJ_ASSOC :: GSYM set_sepTheory.STAR_ASSOC ::
+	stateTheory.STATE_def :: m0_component_distinct ::
+	set_sepTheory.SEP_T_def :: m0_CONFIG_def ::
+	set_sepTheory.cond_STAR :: stateTheory.FRAME_STATE_def ::
+	m0_select_state_thms);
 in 
-    SIMP_CONV (std_ss++boolSimps.LET_ss)  
-	[COUNT_STEPS_def,
-	    m0_decompTheory.m0_COUNT_def,
-	    m0_progTheory.m0_PC_def,
-	    m0_progTheory.M0_MODEL_def,
-	    progTheory.SEP_REFINE_def,
-	    PULL_CODE_POOL,
-	    stateTheory.NEXT_REL_EQ] 
-    THENC SIMP_CONV std_ss [GSYM set_sepTheory.STAR_ASSOC,CODE_POOL_STAR, stateTheory.SPLIT_STATE, m0_select_state_pool_thm, PULL_EXISTS]
-    THENC SIMP_CONV (std_ss++pred_setLib.PRED_SET_ss) (
-	    GSYM CONJ_ASSOC::
-	GSYM set_sepTheory.STAR_ASSOC::
-	    stateTheory.STATE_def::
-	    m0_component_distinct::
-	set_sepTheory.SEP_T_def::
-	m0_CONFIG_def::
-	set_sepTheory.cond_STAR::
-	m0_select_state_thms )
+    REWRITE_AND_PULL_CODE_POOL_INFRONT THENC
+    REWRITE_CODE_POOL THENC
+    REWRITE_REST
 end
 
 (* tying to make a more general version *)
@@ -87,15 +81,111 @@ DB.find  "SEP_EQ_STAR"
     cheat);
 
 
-
-
-
-
-
 (* get the first matching theorem from DB find *)
+(*
 val GET_THM = (fst o snd o hd o DB.find);
 
+open m0_stepLib
+     val () = print_instructions () 
+     val ev = thumb_step (false, false)  
+     val ev_code = thumb_step_code (true, true)
+     val ev_h = thumb_step_hex (false, false)
 
+open bitstringTheory
+
+((DISCH_ALL o hd o ev_h) "1814")
+ 
+open bitstringLib
+	 open blastLib
+
+open pred_setTheory
+
+
+open wordsLib
+
+m0_decompTheory.test
+REPEAT STRIP_TAC
+DB.find "CODE_POOL"
+
+SIMP_TAC std_ss [ ONCE_REWRITE_CONV [CONJ_COMM] `` (NextStateM0 s = SOME s') /\ b`` ]
+*)
+(*
+
+2b2:   b5f0            push    {r4, r5, r6, r7, lr}
+ 2b4:   1c07            adds    r7, r0, #0
+ 2b6:   2500            movs    r5, #0
+ 2b8:   b085            sub     sp, #20
+ 2ba:   4b12            ldr     r3, [pc, #72]   ; (304 <process_messages+0x52>)
+ 2bc:   429d            cmp     r5, r3
+ 2be:   dc1f            bgt.n   300 <process_messages+0x4e>
+ 2c0:   f7ff ff2c       bl      11c <uart_read>
+ 2c4:   1c06            adds    r6, r0, #0
+ 2c6:   ac01            add     r4, sp, #4
+ 2c8:   1c20            adds    r0, r4, #0
+ 2ca:   f7ff ff41       bl      150 <shift_buffer>
+ 2ce:   1c20            adds    r0, r4, #0
+ 2d0:   7266            strb    r6, [r4, #9]
+ 2d2:   f7ff ff87       bl      1e4 <get_seq_no>
+ 2d6:   1c06            adds    r6, r0, #0
+ 2d8:   1c2a            adds    r2, r5, #0
+ 2da:   1c20            adds    r0, r4, #0
+ 2dc:   1c31            adds    r1, r6, #0
+ 2de:   f7ff ff63       bl      1a8 <valid_msg>
+ 2e2:   2800            cmp     r0, #0
+ 2e4:   d0e9            beq.n   2ba <process_messages+0x8>
+ 2e6:   1c30            adds    r0, r6, #0
+ 2e8:   1c21            adds    r1, r4, #0
+ 2ea:   1c3a            adds    r2, r7, #0
+ 2ec:   f7ff ff82       bl      1f4 <encrypt>
+ 2f0:   1c20            adds    r0, r4, #0
+ 2f2:   f7ff ffa3       bl      23c <zero_data_headers>
+ 2f6:   1c20            adds    r0, r4, #0
+ 2f8:   1c35            adds    r5, r6, #0
+ 2fa:   f7ff ffb9       bl      270 <write_to_uart>
+ 2fe:   e7dc            b.n     2ba <process_messages+0x8>
+ 300:   b005            add     sp, #20
+ 302:   bdf0            pop     {r4, r5, r6, r7, pc}
+ 304:   0001fff6        .word   0x0001fff6
+*)
+
+val COUNT_CONV = fn inst => 
+    (SEP_CONV THENC   
+    SIMP_CONV (std_ss ++ boolSimps.CONJ_ss ++ WORD_ss ++ BITSTRING_GROUND_ss) (m0_state_accfupds::(map (GEN_ALL o DISCH_ALL) (ev_h inst)))
+    )
+
+
+(* ldr *)
+m0_spec_hex "f7ff ff63" 
+    COUNT_CONV "4b12"
+`` !p. COUNT_STEP (m0_PC p  ) {(p,INL 0x4b12w)} 2``
+
+(* str *)
+COUNT_CONV "7266" `` !p. COUNT_STEP (m0_PC p  ) {(p,INL 0x7266w)} 2``
+
+
+ev_h "f7ff ff63"
+dc1f
+SEP_CONV THENC
+m0_spec_hex "dc1f"
+m0_spec_hex "f7ff ff63"
+((GEN_ALL o DISCH_ALL o hd o ev_h) "dc1f")
+
+(* function call *)
+COUNT_CONV  "f7ff ff63"
+`` !p. COUNT_STEP (m0_PC p  ) {(p,INR 0xF7FFFF63w)} 4``
+
+
+(* pop *)
+
+val () = m0AssemblerLib.print_m0_code `
+pop {r1-r7, pc, sp}
+`
+m0_spec_hex "b5f0"
+
+m0_spec_hex "bdfe"
+ev_h "b5f0"
+COUNT_CONV "b5f0" `` !p. COUNT_STEP (m0_PC p  ) {(p,INL 0xb5f0w)} 6``
+COUNT_CONV "bdfe" `` !p. COUNT_STEP (m0_PC p  ) {(p,INL 0xbdfew)} 12``
 
 val COUNT_STEPS_def = Define `
 COUNT_STEP P C count =
@@ -135,13 +225,9 @@ FULL_SIMP_TAC (std_ss++boolSimps.LET_ss ++ bitstringLib.v2w_n2w_ss ++ wordsLib.W
     m0_state_accfupds
 ]
 
-DB.find "m0_state_REG"
 Q.UNABBREV_TAC `s'` 
 
 
-set_trace "simplifier" 0;
-DB.find "Aligned"
-aligmentTheory.
 ``aligned 1 (p:word32) = aligned 1 (p + 2w)``
 EVAL `` (1w:word32) << 1``
 SIMP_TAC std_ss [ 
@@ -202,21 +288,12 @@ CHOOSE
      {{(m0_c_count,m0_d_num c)}} (SELECT_STATE m0_proj y s) ∧
      SEP_T (FRAME_STATE m0_proj y s)``))
 
-
-
-
-
-
- 
-
-GET_THM "m0_component_distinct" 
 PAT_X_ASSUME
 Ho_Rewrite.ONCE_REWRITE_TAC [ FUN_EQ_THM]
 
 CASE_TAC 
 DB.match [] ``case _ of _``
 
- open pred_setTheory
  (SIMP_CONV (std_ss) [
     GET_THM "SEP_T",
     GET_THM "m0_proj_def",
@@ -317,7 +394,6 @@ decompilerLib.add_decompiled ("LDRB", SPEC_ALL restrict_ldrb_th
 
 val (code_th, code_defs) = m0_decompile "code"` 
 00c0
-1814
 insert: LDRB
 `
 
@@ -717,7 +793,7 @@ in
 end
 
 (* -- *)
-
+    extend_m0_code_pool
 fun reg_index tm =
    case Term.dest_thy_const tm of
       {Thy = "m0", Name = "RName_0", ...} => 0
@@ -1215,3 +1291,4 @@ in
    val m0_spec_hex = m0_spec_hex false
    val m0_spec_code = List.map m0_spec_hex o
                       (m0AssemblerLib.m0_code: string quotation -> string list)
+			  
