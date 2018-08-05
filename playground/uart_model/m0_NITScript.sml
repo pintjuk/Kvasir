@@ -80,18 +80,22 @@ val NIT_STEP_thm = Q.store_thm ("NIT_STEP_thm",
 );
 
 val NIT_W_def = Define`
-NIT region s t =   ! s' seq seq' i.   m0_non_r_eq region s s' /\ 
+NIT_W region P t =   !s s' seq seq' i F.   
+               ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
+               m0_non_r_eq region s s' /\ 
                rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
                rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               m0_non_r_eq region s s' /\ ((seq i).count = t) ==>   
+               ((seq i).count = t)) ==>   
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
 
 val NIT_def = Define`
-NIT region s t =   ! s' seq seq' i.   m0_non_r_eq region s s' /\ 
+NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i F.   
+               ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
+               m0_non_r_eq region s s' /\ 
                rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
                rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               m0_non_r_eq region s s' /\ ((seq i).count <= t) ==>   
+               ((seq i).count <= t)) ==>   
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
 

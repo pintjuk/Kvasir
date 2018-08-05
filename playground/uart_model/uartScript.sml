@@ -256,19 +256,16 @@ val uart_push_rbuf_def = Define `
 (*******************************************)
      
 val m0u_r_eq_def = Define `
-    m0u_r_eq region (s1,u1) (s2,u2) = 
-        m0_r_eq region s1 s2 /\ (u1=u2)
-`;
+    m0u_r_eq region ((s1,u1),in1,out1) ((s2, u2),in2,out2)  = 
+        m0_r_eq region s1 s2 /\ (u1=u2) /\ (out1=out2) /\ (in1=in2)`;
 
 val m0u_non_r_eq_def = Define `
-    m0u_non_r_eq region (s1,u1) (s2, u2) = 
-        m0_non_r_eq region s1 s2
-` ;
+    m0u_non_r_eq region ((s1,u1),in1,out1) ((s2, u2),in2,out2) = 
+        m0_non_r_eq region s1 s2`;
 
 val m0u_m0_non_r_eq_def = Define `
-    m0u_m0_non_r_eq region (s1,u1) s2 = 
-        m0_non_r_eq region s1 s2
-` ;
+    m0u_m0_non_r_eq region ((s1,u1),in1,out1) s2 = 
+        m0_non_r_eq region s1 s2`;
 
 
 val ward_region_def = Define`
@@ -424,23 +421,66 @@ val m0u_Next_def= Define
 **)
 ((ARB, ARB), ARB, ARB)`
 
+(********************************************)
+(*          No exceptions                   *)
+(*                                          *)
+(********************************************)
+val NEX_def = Define ` NEX (P :(m0_component # m0_data -> bool) -> bool) t = ! s seq i F.    
+               ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
+               rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
+               ((seq i).count < t))==>   
+                  ( (Next (seq i)).exception = NoException) `;
+
+(********************************************)
+(*          Uart model prog                 *)
+(*                                          *)
+(********************************************)
+
+val NextStateM0U_def = Define ` NextStateM0U ((s0,u0),I0,O0) =
+      (let
+        ((s1,u1),I1,O1)  = m0u_Next ((s0,u0),I0,O0)
+      in
+          if (~u1.unpredictable /\ (s1.exception = NoException))
+         then SOME ((s1,u1),I1,O1) else NONE)`;
+
+(*
+
+val M0U_MODEL = Define `M0U_MODEL = (STATE m0_proj,NEXT_REL $= NextStateM0U, m0_instr,$=,K F)`
+
+*)
 
 (********************************************)
 (*           Uart model theorems            *)
+(*                                          *)
 (********************************************)
-val AXI = Q.store_thm("AXI", `!s su input output.  
+val AXI = Q.store_thm("AXI", `
+!s su input output.  
 (NIT_STEP uart_r s) /\ (m0u_m0_non_r_eq uart_r su s ) ==>
-let
-    next_s = (Next s);
-    (next_su,next_input, next_output ) = m0u_Next (su,input,output)
-in  (m0u_m0_non_r_eq uart_r next_su next_s ) /\ (m0u_r_eq uart_r next_su su)`,
+             (m0u_m0_non_r_eq uart_r (m0u_Next su) (Next s))/\
+             (m0u_r_eq uart_r (m0u_Next su) su)`,
 
-    REPEAT GEN_TAC>> Cases_on `su`>>
+    REPEAT GEN_TAC>> 
+    Cases_on `su`>>
+    Cases_on `r`>> Cases_on `q`>>
+    rename1 `NIT_STEP uart_r s ∧ m0u_m0_non_r_eq uart_r ((su,u),in0,out0) s`>>
     SIMP_TAC (std_ss++LET_ss) [m0u_Next_def, m0u_r_eq_def ,m0u_m0_non_r_eq_def, PULL_FORALL, NIT_STEP_TRANS_thm, NIT_STEP_TRANS_thm]>>
-    (MP_TAC o Q.SPECL [`uart_r`, `s`, `q`]) NIT_STEP_TRANS_thm>>
+    (MP_TAC o Q.SPECL [`uart_r`, `s`, `su`]) NIT_STEP_TRANS_thm>>
     REPEAT STRIP_TAC>>
     FULL_SIMP_TAC std_ss []>>
     FULL_SIMP_TAC (std_ss++LET_ss) [m0u_Next_def, m0u_r_eq_def ,m0u_m0_non_r_eq_def, PULL_FORALL, NIT_STEP_TRANS_thm, NIT_STEP_TRANS_thm, NIT_STEP_thm]>>
-    METIS_TAC [m0_non_r_eq_refl_thm, m0_r_eq_refl_thm]);
+    METIS_TAC [m0_non_r_eq_refl_thm, m0_r_eq_refl_thm]
+);
+
+val COSIM = Define ` COSIM P t = ! s s' seq seq' i F.   
+    ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
+    rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
+    rel_sequence (NEXT_REL $= NextStateM0U) seq' s' /\
+    m0u_m0_non_r_eq uart_r s' s /\ ((seq i).count <= t) )==>   
+	m0u_m0_non_r_eq uart_r (seq' i) (seq i) /\
+	m0u_r_eq uart_r s' (seq' i)`;
+
+val NIT_COSIM_thm = Q.store_thm ("NIT_COSIM_thm", 
+`!P t. ((NIT uart_r P t) /\ (NEX P t)) ==> (COSIM P t)`, cheat);
+
 
 val _ = export_theory();
