@@ -1,9 +1,3 @@
-(*loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/model"::(!loadPath));
-loadPath := ("/Home/daniil/HOL/examples/l3-machine-code/common"::(!loadPath));
-loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/prog"::(!loadPath));
-loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/decompiler"::(!loadPath));
-*)
-
 open HolKernel Parse boolLib bossLib;
 open stateTheory m0_stepTheory boolSimps;
 open wordsTheory;
@@ -80,22 +74,22 @@ val NIT_STEP_thm = Q.store_thm ("NIT_STEP_thm",
 );
 
 val NIT_W_def = Define`
-NIT_W region P t =   !s s' seq seq' i F.   
-               ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
+NIT_W region P t =   !s s' seq seq' i.   
+               ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
                m0_non_r_eq region s s' /\ 
                rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
                rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               ((seq i).count = t)) ==>   
+               ((seq i).count = s.count+t)) ==>   
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
 
 val NIT_def = Define`
-NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i F.   
-               ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
+NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.   
+               ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
                m0_non_r_eq region s s' /\ 
                rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
                rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               ((seq i).count <= t)) ==>   
+               ((seq i).count <= s.count+t)) ==>   
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
 
@@ -104,6 +98,10 @@ NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i 
 (********************************)
 
 val mem_eq_refl_thm = Q.store_thm("mem_eq_refl_thm",
+    `!region mem. mem_eq region mem mem `,
+	 METIS_TAC[mem_eq_def]
+);
+val mem_eq_antisym_thm = Q.store_thm("mem_eq_antisym_thm",
     `!region mem1 mem2. 
 	(mem_eq region mem1 mem2)  = (mem_eq region mem2 mem1) `,
 	 METIS_TAC[mem_eq_def]
@@ -117,12 +115,22 @@ val mem_eq_trans_thm = Q.store_thm("mem_eq_trans_thm",
 SIMP_TAC std_ss [mem_eq_def]);
 
 val m0_r_eq_refl_thm = Q.store_thm ("m0_r_eq_refl_thm",
-`!s1 s2 region. m0_r_eq region s1 s2 =  m0_r_eq region s2 s1`,
+`!s region. m0_r_eq region s s `,
 SIMP_TAC std_ss [m0_r_eq_def, mem_eq_refl_thm]);
 
 val m0_non_r_eq_refl_thm = Q.store_thm ("m0_non_r_eq_refl_thm",
-`!s1 s2 region. m0_non_r_eq region s1 s2 =  m0_non_r_eq region s2 s1`,
+`!s region. m0_non_r_eq region s s`,
 SIMP_TAC std_ss [m0_non_r_eq_def, mem_eq_refl_thm]>>
+METIS_TAC [mem_eq_refl_thm]
+);
+
+val m0_r_eq_antisym_thm = Q.store_thm ("m0_r_eq_antisym_thm",
+`!s1 s2 region. m0_r_eq region s1 s2 =  m0_r_eq region s2 s1`,
+SIMP_TAC std_ss [m0_r_eq_def, mem_eq_antisym_thm]);
+
+val m0_non_r_eq_antisym_thm = Q.store_thm ("m0_non_r_eq_antisym_thm",
+`!s1 s2 region. m0_non_r_eq region s1 s2 =  m0_non_r_eq region s2 s1`,
+SIMP_TAC std_ss [m0_non_r_eq_def, mem_eq_antisym_thm]>>
 METIS_TAC [mem_eq_refl_thm]
 );
 
@@ -152,7 +160,7 @@ METIS_TAC[ mem_eq_trans_thm]);
 val NIT_STEP_TRANS_thm = Q.store_thm("NIT_STEP_TRANS_thm",
 `!r s q . NIT_STEP r s ∧ m0_non_r_eq r q s ==> NIT_STEP r q`,
 SIMP_TAC std_ss [ NIT_STEP_thm]>>
-    METIS_TAC [m0_non_r_eq_trans_thm, m0_non_r_eq_refl_thm ]);
+    METIS_TAC [m0_non_r_eq_trans_thm, m0_non_r_eq_antisym_thm ]);
 
 val NIF_STEP_to_UNION_thm = Q.store_thm ("NIF_STEP_to_UNION_thm",
     `! s region1 region2. NIT_STEP_to region1 s  /\ NIT_STEP_to region2 s ==> 
@@ -211,7 +219,8 @@ val NIF_STEP_UNION_thm = Q.store_thm ("NIF_STEP_UNION_thm",
 (*   Run & equance stuff     *)
 (*****************************)
 
-val M0_SEQUENCE_THM = prove(`` rel_sequence (NEXT_REL $= NextStateM0) seq s <=>
+
+val M0_SEQUENCE_THM = prove(``! seq s. rel_sequence (NEXT_REL $= NextStateM0) seq s <=>
   (seq 0 = s) ∧ !n. if (Next(seq n)).exception = NoException then seq (n+1) = Next (seq n) else seq (n+1) = seq n``,
     SIMP_TAC (std_ss++boolSimps.LET_ss++boolSimps.COND_elim_ss) [
 	DECIDE ``SUC n = n + 1n``, rel_sequence_def, NEXT_REL_EQ, NextStateM0_def]>>
@@ -249,6 +258,14 @@ val RunM0_SEQUENCE_THM = prove(
     (SIMP_TAC std_ss [RunM0_def])>>
     IF_CASES_TAC>> ASM_SIMP_TAC (arith_ss++LET_ss) [RunM0_def, DECIDE ``n+1=SUC n``]
 );
+
+
+val SEQUENCE_EXISTS_THM = Q.store_thm(
+    "SEQUENCE_EXISTS_THM",
+    `!s. ?seq. (rel_sequence (NEXT_REL $= NextStateM0) seq s)`,
+	STRIP_TAC>>
+	Q.EXISTS_TAC `RunM0 s`>>
+	SIMP_TAC std_ss [RunM0_SEQUENCE_THM]);
 
 
 

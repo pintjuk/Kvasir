@@ -1,8 +1,3 @@
-(*
-loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/model"::(!loadPath));
-loadPath := ("/Home/daniil/HOL/examples/l3-machine-code/common"::(!loadPath));
-*)
-
 open HolKernel Parse boolLib;
 open boolSimps;
 open bossLib;
@@ -16,15 +11,16 @@ val _ = new_theory "uart";
 (*********************************)
 (*   buffer model                *)
 (*********************************)
+
 val _= Datatype `buffer = <| data: word32 ['n];
                               h:num;
                               t:num;
-                              size:num;
+                              Size:num;
                               cap:num; |>`;
 
 val bufferN_def = Define `
 Buffer (:'n) = <| data := (FCP i. 0w):word32['n];
-                  h:=0; t:=0; size:= 0;
+                  h:=0; t:=0; Size:= 0;
                   cap:=dimindex(:'n); |>`;
 
 val Pop_def = Define `
@@ -32,12 +28,12 @@ Pop  buf =  ((* Result: *)
                 (buf.data ' buf.t),
              (* Next  buffer state:*) 
                 (buf with <|  t updated_by SUC;  
-                                   size updated_by PRE|>))`;
+                                   Size updated_by PRE|>))`;
 
 val Push_def = Define `
 Push el buf  =  buf with <| data updated_by ( (buf.h MOD buf.cap) :+ el);
                             h    updated_by SUC ;
-                            size updated_by  SUC ;|>
+                            Size updated_by  SUC ;|>
 `;
 
 val  _ = EVAL ``     Buffer (:5)   :> (Push 1w)
@@ -49,7 +45,6 @@ val  _ = EVAL ``     Buffer (:5)   :> (Push 1w)
                           :> Pop
                           :> \(x,y). y
                           :> Pop``;
-
 
 (***********************************************)
 (*      uart                                   *)
@@ -267,6 +262,71 @@ val m0u_m0_non_r_eq_def = Define `
     m0u_m0_non_r_eq region ((s1,u1),in1,out1) s2 = 
         m0_non_r_eq region s1 s2`;
 
+val m0u_r_eq_refl_thm = Q.store_thm("m0u_r_eq_refl_thm",
+`!region s. m0u_r_eq region s s`,
+
+    Cases_on `s`>>
+    Cases_on `r`>>
+    Cases_on `q`>>
+    METIS_TAC[m0u_r_eq_def, m0_r_eq_refl_thm]
+);
+
+val m0u_non_r_eq_refl_thm = Q.store_thm("m0u_non_r_eq_refl_thm",
+`!region s. m0u_non_r_eq region s s`,
+
+    Cases_on `s`>>
+    Cases_on `r`>>
+    Cases_on `q`>>
+    METIS_TAC[m0u_non_r_eq_def, m0_non_r_eq_refl_thm]
+);
+
+val m0u_r_eq_antisym_thm = Q.store_thm("m0u_r_eq_antisym_thm",
+    `!region s1 s2. m0u_r_eq region s1 s2 = m0u_r_eq region s2 s1`,
+    Cases_on `s1`>>
+    Cases_on `s2`>>
+    Cases_on `r`>>
+    Cases_on `r'`>>
+    Cases_on `q`>>
+    Cases_on `q'`>>
+    METIS_TAC[m0u_r_eq_def, m0_r_eq_antisym_thm]
+);
+
+val m0u_non_r_eq_antisym_thm = Q.store_thm("m0u_non_r_eq_antisym_thm",
+    `!region s1 s2. m0u_non_r_eq region s1 s2 = m0u_non_r_eq region s2 s1`,
+    Cases_on `s1`>>
+    Cases_on `s2`>>
+    Cases_on `r`>>
+    Cases_on `r'`>>
+    Cases_on `q`>>
+    Cases_on `q'`>>
+    METIS_TAC[m0u_non_r_eq_def, m0_non_r_eq_antisym_thm]);
+
+val m0u_r_eq_trans_thm = Q.store_thm("m0u_r_eq_trans_thm",
+    `!region s1 s2 s3. m0u_r_eq region s1 s2 /\ m0u_r_eq region s2 s3 ==> m0u_r_eq region s1 s3`,
+    Cases_on `s1`>>
+    Cases_on `s2`>>
+    Cases_on `s3`>>
+    Cases_on `q`>>
+    Cases_on `q'`>>
+    Cases_on `q''`>>
+    Cases_on `r`>>
+    Cases_on `r'`>>
+    Cases_on `r''`>>
+    METIS_TAC[m0u_r_eq_def, m0_r_eq_trans_thm]
+);
+
+val m0u_non_r_eq_trans_thm = Q.store_thm("m0u_non_r_eq_trans_thm",
+    `!region s1 s2 s3. m0u_non_r_eq region s1 s2 /\ m0u_non_r_eq region s2 s3 ==> m0u_non_r_eq region s1 s3`,
+    Cases_on `s1`>>
+    Cases_on `s2`>>
+    Cases_on `s3`>>
+    Cases_on `q`>>
+    Cases_on `q'`>>
+    Cases_on `q''`>>
+    Cases_on `r`>>
+    Cases_on `r'`>>
+    Cases_on `r''`>>
+    METIS_TAC[m0u_non_r_eq_def, m0_non_r_eq_trans_thm]);
 
 val ward_region_def = Define`
 (* TODO: change to bit masking? *)
@@ -425,36 +485,18 @@ val m0u_Next_def= Define
 (*          No exceptions                   *)
 (*                                          *)
 (********************************************)
-val NEX_def = Define ` NEX (P :(m0_component # m0_data -> bool) -> bool) t = ! s seq i F.    
-               ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
+val NEX_def = Define ` NEX (P :(m0_component # m0_data -> bool) -> bool) t = ! s seq i.    
+               ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
                rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
-               ((seq i).count < t))==>   
-                  ( (Next (seq i)).exception = NoException) `;
-
-(********************************************)
-(*          Uart model prog                 *)
-(*                                          *)
-(********************************************)
-
-val NextStateM0U_def = Define ` NextStateM0U ((s0,u0),I0,O0) =
-      (let
-        ((s1,u1),I1,O1)  = m0u_Next ((s0,u0),I0,O0)
-      in
-          if (~u1.unpredictable /\ (s1.exception = NoException))
-         then SOME ((s1,u1),I1,O1) else NONE)`;
-
-(*
-
-val M0U_MODEL = Define `M0U_MODEL = (STATE m0_proj,NEXT_REL $= NextStateM0U, m0_instr,$=,K F)`
-
-*)
+               ((seq i).count <= s.count+ t))==>   
+                  ( (Next (seq (PRE i))).exception = NoException) `;
 
 (********************************************)
 (*           Uart model theorems            *)
 (*                                          *)
 (********************************************)
 val AXI = Q.store_thm("AXI", `
-!s su input output.  
+!s su.  
 (NIT_STEP uart_r s) /\ (m0u_m0_non_r_eq uart_r su s ) ==>
              (m0u_m0_non_r_eq uart_r (m0u_Next su) (Next s))/\
              (m0u_r_eq uart_r (m0u_Next su) su)`,
@@ -470,17 +512,4 @@ val AXI = Q.store_thm("AXI", `
     FULL_SIMP_TAC (std_ss++LET_ss) [m0u_Next_def, m0u_r_eq_def ,m0u_m0_non_r_eq_def, PULL_FORALL, NIT_STEP_TRANS_thm, NIT_STEP_TRANS_thm, NIT_STEP_thm]>>
     METIS_TAC [m0_non_r_eq_refl_thm, m0_r_eq_refl_thm]
 );
-
-val COSIM = Define ` COSIM P t = ! s s' seq seq' i F.   
-    ((SEP_REFINE (P * F) ($=) (STATE m0_proj) s) /\
-    rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
-    rel_sequence (NEXT_REL $= NextStateM0U) seq' s' /\
-    m0u_m0_non_r_eq uart_r s' s /\ ((seq i).count <= t) )==>   
-	m0u_m0_non_r_eq uart_r (seq' i) (seq i) /\
-	m0u_r_eq uart_r s' (seq' i)`;
-
-val NIT_COSIM_thm = Q.store_thm ("NIT_COSIM_thm", 
-`!P t. ((NIT uart_r P t) /\ (NEX P t)) ==> (COSIM P t)`, cheat);
-
-
 val _ = export_theory();
