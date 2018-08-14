@@ -5,7 +5,7 @@ ARMGNU = arm-none-eabi
 PROJECT_NAME = kvasir
 AUTHORS = Daniil-Pintjuk Adam-Johansson
 AOPS = --warn --fatal-warnings -mcpu=cortex-m0
-COPS = -std=gnu11 -Wall -Os -nostdlib -nostartfiles -ffreestanding -mcpu=cortex-m0
+COPS = -std=gnu11 -Wall -Os -nostdlib -nostartfiles -fif-conversion -fno-inline-small-functions -ffreestanding -mcpu=cortex-m0
 FILES = uart crypto
 BUILD_DIR = build
 SORCE_DIR = src

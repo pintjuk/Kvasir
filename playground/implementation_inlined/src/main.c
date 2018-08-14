@@ -5,7 +5,7 @@
 
 void test_fill_key(char *key){
   for(int i = 0; i < 8 * 16383; i++){
-    key[i] = 0x0;
+    key[i] = i*i*i % 256;
   }
 }
 

@@ -5,6 +5,7 @@ open HolKernel Parse boolLib bossLib
 open pairTheory;
 open ListPair;
 open wordsTheory;
+open wordsLib;
 
 (*
 Run these if you are using interactive mode.
@@ -16,7 +17,30 @@ loadPath := ((HOLDIR ^ "/examples/machine-code/hoare-triple")::(!loadPath));
 
 open progTheory;
 open m0_decompLib;
+open m0_progLib;
 open helperLib;
+
+
+
+val count_COMM = prove(`` !x c . (x * m0_count c) = (m0_count c * x)``,
+ SIMP_TAC std_ss [set_sepTheory.STAR_COMM]
+);
+
+val config_COMM = prove(`` !x c . (x * m0_CONFIG (F,F)) = (m0_CONFIG (F,F) * x)``,
+ SIMP_TAC std_ss [set_sepTheory.STAR_COMM]
+);
+
+
+fun get_spec (code :string) (thms : Thm.thm list) :Thm.thm =
+   let 
+      val thm = hd (m0_spec_hex code)
+      val thm1 = ONCE_REWRITE_RULE [(GSYM m0_decompTheory.m0_COUNT_def)]
+                    (REWRITE_RULE [count_COMM, set_sepTheory.STAR_ASSOC]
+                        (ONCE_REWRITE_RULE [config_COMM] thm))
+      in
+      (SIMP_RULE (arith_ss++pred_setLib.PRED_SET_ss++wordsLib.WORD_ss) thms thm1)
+   end;
+      
 
 fun dest_all_exists_helper (t :term) exvars exbodies =
     if not (is_exists t) then (exvars, exbodies) else

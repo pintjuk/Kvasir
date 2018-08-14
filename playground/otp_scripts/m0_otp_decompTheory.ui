@@ -1,0 +1,6 @@
+$(HOLDIR)/sigobj/Overlay
+$(HOLDIR)/sigobj/Thm
+$(HOLDIR)/sigobj/term_grammar
+$(HOLDIR)/sigobj/type_grammar
+/home/luceat/Documents/skola/exjobb/Kvasir/playground/otp_scripts/m0_otp_decompTheory
+/home/luceat/Documents/skola/exjobb/Kvasir/playground/otp_scripts/m0_otp_decompTheory.sig

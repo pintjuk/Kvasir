@@ -17,18 +17,19 @@ val _ = type_abbrev("otp_output_stream", ``:byte list``);
 
 val _ = type_abbrev("otp_buffer", ``:num -> byte``);
 
-Datatype `otp_state = <| Buffer :otp_buffer; CurrSeq :num; 
-                       In :otp_input_stream; Out :otp_output_stream; Key :otp_key_stream|>`
+val _ = Datatype `otp_state = <| Buffer :otp_buffer; CurrSeq :num; 
+                       In :otp_input_stream; Out :otp_output_stream; Key :otp_key_stream|>`;
 
 
 val max_seq_def = Define `max_seq :num = 16383`;
 
+(*
 !s. s.CurrSeq = max_seq - 1 ==>
   s.CurrSeq =tls_otp_spec(s).Curseq /\
   s.Out = tls_otp_spec(s).Out
  
 !s s.CurrSeq <= tls_otp_spec(s).CurrSeq
-
+*)
 
 val buffer_def = Define `buffer (n :num) = case n of
                   | 0 => (0w :byte)
@@ -103,8 +104,6 @@ val test_buffer_def = Define `test_buffer =
     ((0 =+ 255w) ((1 =+ 255w) buffer))`;
 
 
-EVAL ``get_seq_no test_buffer``
-
 val seq_in_order_def = Define `seq_in_order curr new =
                         (curr < new /\ curr < max_seq)`;
 
@@ -120,9 +119,9 @@ val encrypt_buffer_def = Define `encrypt_buffer (f :otp_buffer) (key :otp_key_st
                          ((8 =+ encrypt (f 8) (key (8*seq+6)))
 			 ((9 =+ encrypt (f 9) (key (8*seq+7))) f))))))))`;
 
-
+(*
 ! seq1 seq2. seq1 != seq2 ==> g(seq1) not in g(seq2)
-
+*)
 val zero_datah_def = Define `zero_datah (f : otp_buffer) = 
                          ((2 =+  ((f 2) && 127w))
                          ((3 =+  ((f 3) && 127w))
@@ -163,7 +162,7 @@ val tls_otp_spec_def = Define `tls_otp_spec (s : otp_state) :otp_state =
 
 
 
-
+(*
 val badInput = Define `badInput = 0w::0w::0w::0w::0w::0w::0w::0w::0w::0w::[] :otp_input_stream`;
 val badOutput = Define `badOutput = [] :otp_output_stream`;
 val badKey = Define `badKey :otp_key_stream = \i . ((n2w i) :byte)`;
@@ -185,5 +184,5 @@ val test = EVAL ``niceState  :> tls_otp_spec  :> tls_otp_spec  :> tls_otp_spec  
 val simp = SIMP_RULE arith_ss [UPDATE_def] test;
 
 val simp2 = REWRITE_RULE [UPDATE_def] test;
-
+*)
 val _ = export_theory();

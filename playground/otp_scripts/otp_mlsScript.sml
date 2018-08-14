@@ -7,7 +7,9 @@ open pairLib;
 open pred_setTheory;
 open arithmeticTheory;
 
+open updateTheory;
 
+open blastLib;
 
 (*
 Run these if you are using interactive mode.
@@ -15,15 +17,20 @@ Run these if you are using interactive mode.
 loadPath := ((HOLDIR ^ "/examples/l3-machine-code/m0")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/l3-machine-code/m0/decompiler")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/machine-code/hoare-triple")::(!loadPath));
-loadPath := ("/home/luceat/Documents/skola/exjobb/scripts"::(!loadPath));
+loadPath := ("/home/luceat/Documents/skola/exjobb/Kvasir/playground/otp_scripts"::(!loadPath));
 
 *)
 
 open helperLib;
-open blastLib;
 open m0_otp_decompTheory;
-
 open otp_utilLib;
+
+open m0_stepLib;
+
+open m0_stepTheory;
+
+
+open alignmentTheory;
 
 val _ = new_theory "otp_mls";
 
@@ -38,9 +45,6 @@ val mls_buffer_def = Define `
 val mls_shift_one_def = Define `mls_shift_one a m = 
      (m = (a =+ (7 >< 0) (a+1w)) m)`
 
-val mls_shift_buffer_def = Define `
-    shift_buffer a m = ((a += (7 >< 0) (a+1w)) m )
-
 
 val mls_shift_buffer_def = Define `
     shift_buffer a (m :word32->word8) = ((a =+ m (a+1w)) 
@@ -53,8 +57,6 @@ val mls_shift_buffer_def = Define `
                        (((a+7w) =+ m (a+8w))
                        (((a+8w) =+ m (a+9w))
                        (((a+9w) =+ 0w) m))))))))))`;
-
-SIMP_RULE arith_ss [UPDATE_def] mls_shift_buffer_def;
 
 val mls_shift_buffer_pre_th = prove(
     ``!a c dmem m. buffer(a, c, dmem, m) ==> m0_shift_buffer_pre(a, c, dmem, m)``,
@@ -100,13 +102,13 @@ val mls_six_or_def = Define `six_or x m = m (x+2w) || m (x+3w) || m (x+4w) || m 
 
 val mls_validate_datah_def = Define `validate_datah x m = ~(w2w (six_or x m) >>> 7)`;
                          
-val otp_validate_datah_pre_th = prove(
+val mls_validate_datah_pre_th = prove(
    ``!a c dmem m . buffer(a, c, dmem, m) ==> m0_validate_datah_pre(a, c, dmem, m)``,
    ONCE_REWRITE_TAC [mls_buffer_def, m0_validate_datah_def, m0_validate_datah_pre_def, mls_validate_datah_def] >>
    SIMP_TAC arith_ss [LET_DEF, INSERT_SUBSET]
 );
 
-val otp_exists_post_th = prove(
+val mls_exists_post_th = prove(
    ``!a c dmem m . ? r1 r2.  m0_validate_datah(a, c, dmem, m)  = 
                   (validate_datah a m, r1, r2, c+26, dmem, m)``,
    REWRITE_TAC [mls_buffer_def, m0_validate_datah_def, mls_validate_datah_def, mls_six_or_def] >>
@@ -115,14 +117,14 @@ val otp_exists_post_th = prove(
    SIMP_TAC arith_ss [WORD_w2w_OVER_BITWISE, WORD_OR_ASSOC] 
 );
 
-val otp_val_datah_post_th = POSTC_EXISTS_ELIM m0_validate_datah_def otp_exists_post_th;
+val mls_val_datah_post_th = POSTC_EXISTS_ELIM m0_validate_datah_def mls_exists_post_th;
 
-val otp_validate_datah = COMB_PREC_POSTC otp_validate_datah_pre_th otp_val_datah_post_th;
+val mls_validate_datah = COMB_PREC_POSTC mls_validate_datah_pre_th mls_val_datah_post_th;
 
 
 
 val th = Theory.save_thm("otp_mls_validate_datah",
-   SIMP_RULE std_ss [LET_DEF] (INST_SPEC m0_hoare_datah otp_validate_datah));
+   SIMP_RULE std_ss [LET_DEF] (INST_SPEC m0_hoare_datah mls_validate_datah));
 
 
 
@@ -130,14 +132,14 @@ val th = Theory.save_thm("otp_mls_validate_datah",
 
 val mls_val_seqh_def = Define `validate_seqh x m = (w2w (m x && m (x+1w))) >>> 7` 
 
-val otp_validate_seqh_pre = prove(
+val mls_validate_seqh_pre = prove(
    ``!a c dmem m . buffer(a, c, dmem, m) ==>
         m0_validate_seqh_pre(a, c, dmem, m)``,
    ONCE_REWRITE_TAC [mls_buffer_def, m0_validate_seqh_pre_def] >>
    SIMP_TAC arith_ss [LET_DEF, INSERT_SUBSET]
 );
 
-val otp_validate_seqh_exists_post = prove (
+val mls_validate_seqh_exists_post = prove (
    ``!a c dmem m. 
         ? r1 .
         m0_validate_seqh(a, c, dmem, m) = ((validate_seqh a m), r1, c+6, dmem, m)``,
@@ -146,15 +148,14 @@ val otp_validate_seqh_exists_post = prove (
     SIMP_TAC arith_ss [LET_DEF, WORD_w2w_OVER_BITWISE, WORD_AND_COMM]
 );
 
-val otp_val_seqh_post_th = POSTC_EXISTS_ELIM m0_validate_seqh_def otp_validate_seqh_exists_post;
+val mls_val_seqh_post_th = POSTC_EXISTS_ELIM m0_validate_seqh_def mls_validate_seqh_exists_post;
 
-val otp_val_seqh = COMB_PREC_POSTC otp_validate_seqh_pre otp_val_seqh_post_th;
+val mls_val_seqh = COMB_PREC_POSTC mls_validate_seqh_pre mls_val_seqh_post_th;
 
 val th = save_thm("otp_mls_validate_seqh",
-   SIMP_RULE std_ss [LET_DEF] (INST_SPEC m0_hoare_seqh otp_val_seqh));
+   SIMP_RULE std_ss [LET_DEF] (INST_SPEC m0_hoare_seqh mls_val_seqh));
 
 
-mls_buffer_def
 
 (* mid level spec for get sequence number *)
 
@@ -187,6 +188,10 @@ val th = save_thm("otp_mls_get_seq_no",
    SIMP_RULE std_ss [LET_DEF] (INST_SPEC m0_hoare_get_seq mls_get_seq_no_th));
 
 
+(* mid level spec for is_seq_in_order *)
+val mls_is_seq_in_order_def =  Define `mls_is_seq_in_order (seq_no :word32) (last_seq_no :word32) :word32 =
+                               (last_seq_no < seq_no) && (seq_no <= 8w*16383w - 1w)`
+
 (* mid level spec for the buffer encryption *)
 val mls_encrypt_def = Define `mls_encrypt buf key seq (m :word32->word8) =
                    (((buf+2w) =+ ((m (buf + 2w)) ?? (m (key + 8w*seq)))) 
@@ -200,13 +205,24 @@ val mls_encrypt_def = Define `mls_encrypt buf key seq (m :word32->word8) =
                                 m))))))))`;    
 
 
-val mls_encrypt_pre_th = prove(``!a c dmem m. buffer(a, c, dmem, m) ==>
-                                   m0_encrypt_pre(r0, a, r2, r4, r13, r14, c, dmem, m)``,
-   REWRITE_TAC [LET_DEF, m0_encrypt_pre_def, mls_buffer_def] >>
-   SIMP_TAC arith_ss [LET_DEF, INSERT_SUBSET]
-);
+(*
+Encrypt needs a seq_no, a buffer, and a key stream 
 
-SIMP_RULE bool_ss [LET_DEF] m0_encrypt_pre_def
+val mls_encrypt_pre_th = prove(``!a c dmem m. buffer(a, c, dmem, m) ==>
+                                   m0_encrypt_pre(r0, a, r2, c, dmem, m)``,
+   REWRITE_TAC [LET_DEF, m0_encrypt_pre_def, mls_buffer_def] >>
+   SIMP_TAC (arith_ss++wordsLib.WORD_ss) [LET_DEF, INSERT_SUBSET] 
+
+*)
+(*
+wordsTheory.aligned_def
+m0_stepTheory.aligned_def
+DB.find "m0_encrypt_pre"
+
+DB.find "m0_shift_buffer_pre"
+
+*)
+(* SIMP_RULE bool_ss [LET_DEF] m0_encrypt_pre_def
 
 
 REWRITE_RULE [LET_DEF] m0_encrypt_pre
@@ -216,6 +232,8 @@ m0_encrypt_pre
 m0_encrypt_def
 
 m0_hoare_encrypt
+
+*)
 
 (* mid level spec for zeroing the header of an encrypted buffer *)
 
