@@ -1,5 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open stateTheory m0_stepTheory boolSimps;
+loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/model"::(!loadPath));
+loadPath := ("/Home/daniil/HOL/examples/l3-machine-code/common"::(!loadPath));
+loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/prog"::(!loadPath));
+loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/decompiler"::(!loadPath));
+
+open stateTheory m0_stepTheory boolSimps
 open wordsTheory;
 open m0Theory;
 open boolSimps;
@@ -8,7 +12,7 @@ open m0_progLib;
 open m0_progTheory;
 open progTheory;
 
-val _ = new_theory "m0_NIT";
+val _ = new_theory "m0_flowTheory";
 
 val mem_eq_def = Define`
 mem_eq region mem1 mem2 = 
@@ -19,6 +23,7 @@ val m0_r_eq_def = Define `
 m0_r_eq region s1 s2 = 
    (mem_eq region s1.MEM s2.MEM)
 `;
+
 
 val m0_non_r_eq_def = Define `
     m0_non_r_eq region s1 s2 = (
@@ -45,8 +50,8 @@ val m0_non_r_eq_def = Define `
 
     for arbitrary content of the region, the next instruciton does not change the content of the region
 **)
-val NIT_STEP_to_def = Define` 
- NIT_STEP_to region s = (
+val no_step_flow_to_def = Define` 
+ no_step_flow_to region s = (
   !s'.  m0_non_r_eq region s s' ==> m0_r_eq region s' (Next s') 
  )`;
 
@@ -55,183 +60,158 @@ val NIT_STEP_to_def = Define`
     
     Swaping out the content of the region arbitraraly does not affect the execution of the rest of the state.
 **)
-val NIT_STEP_from_def = Define` 
- NIT_STEP_from region s = (
+val no_step_flow_from_def = Define` 
+ no_step_flow_from region s = (
   !s'. m0_non_r_eq region s s'==> m0_non_r_eq region (Next s) (Next s') 
 )`;
 
-val NIT_STEP_def = Define`
-NIT_STEP region s = (NIT_STEP_from region s) /\ (NIT_STEP_to region s) 
+val no_step_flow_def = Define`
+no_step_flow region s = (no_step_flow_from region s) /\ (no_step_flow_to region s) 
 `;
 
-val NIT_STEP_thm = Q.store_thm ("NIT_STEP_thm",
-    `!region s. NIT_STEP region s =  
-         (!s'. m0_non_r_eq region s s'==> 
-            (m0_non_r_eq region (Next s) (Next s') /\
-             m0_r_eq region s' (Next s')))`,
-    SIMP_TAC std_ss [NIT_STEP_def, NIT_STEP_to_def, NIT_STEP_from_def]>>
-    METIS_TAC []
-);
-
-val NIT_W_def = Define`
-NIT_W region P t =   !s s' seq seq' i.   
-               ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
-               m0_non_r_eq region s s' /\ 
-               rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
-               rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               ((seq i).count = s.count+t)) ==>   
+val no_flow_run_at_def = Define`
+no_flow_run_at region s i = let 
+ (to_set,next,instr,less,allow) = M0_MODEL
+in ! s' seq seq'.   m0_non_r_eq region s s' /\ 
+               rel_sequence next seq  s /\
+               rel_sequence next seq' s' ==>   
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
 
-val NIT_def = Define`
-NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.   
-               ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
+val no_flow_run_upto_def = Define`
+no_flow_run_upto region s i = let 
+ (to_set,next,instr,less,allow) = M0_MODEL
+in ! s' seq seq' i'.  0<i'/\ i' <= i /\
                m0_non_r_eq region s s' /\ 
-               rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
-               rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               ((seq i).count <= s.count+t)) ==>   
-                   m0_non_r_eq region (seq i) (seq' i) /\
-                   m0_r_eq region s' (seq' i)`;
+               rel_sequence next seq  s /\
+               rel_sequence next seq' s' ==>   
+                   m0_non_r_eq region (seq i') (seq' i') /\
+                   m0_r_eq region s' (seq' i')`;
 
-(********************************)
-(*   uart eqvivalance thearems  *)
-(********************************)
+SIMP_RULE (std_ss++LET_ss) [RunM0_SEQUENCE_THM, M0_MODEL_def] no_flow_run_upto_def
 
-val mem_eq_refl_thm = Q.store_thm("mem_eq_refl_thm",
-    `!region mem. mem_eq region mem mem `,
-	 METIS_TAC[mem_eq_def]
-);
-val mem_eq_antisym_thm = Q.store_thm("mem_eq_antisym_thm",
-    `!region mem1 mem2. 
-	(mem_eq region mem1 mem2)  = (mem_eq region mem2 mem1) `,
-	 METIS_TAC[mem_eq_def]
-);
-
-val mem_eq_trans_thm = Q.store_thm("mem_eq_trans_thm",
-    `!region mem1 mem2 mem3. 
-	(mem_eq region mem1 mem2) /\ 
-	(mem_eq region mem2 mem3) ==>
-	    (mem_eq region mem1 mem3) `,
-SIMP_TAC std_ss [mem_eq_def]);
-
-val m0_r_eq_refl_thm = Q.store_thm ("m0_r_eq_refl_thm",
-`!s region. m0_r_eq region s s `,
-SIMP_TAC std_ss [m0_r_eq_def, mem_eq_refl_thm]);
-
-val m0_non_r_eq_refl_thm = Q.store_thm ("m0_non_r_eq_refl_thm",
-`!s region. m0_non_r_eq region s s`,
-SIMP_TAC std_ss [m0_non_r_eq_def, mem_eq_refl_thm]>>
-METIS_TAC [mem_eq_refl_thm]
-);
-
-val m0_r_eq_antisym_thm = Q.store_thm ("m0_r_eq_antisym_thm",
-`!s1 s2 region. m0_r_eq region s1 s2 =  m0_r_eq region s2 s1`,
-SIMP_TAC std_ss [m0_r_eq_def, mem_eq_antisym_thm]);
-
-val m0_non_r_eq_antisym_thm = Q.store_thm ("m0_non_r_eq_antisym_thm",
-`!s1 s2 region. m0_non_r_eq region s1 s2 =  m0_non_r_eq region s2 s1`,
-SIMP_TAC std_ss [m0_non_r_eq_def, mem_eq_antisym_thm]>>
-METIS_TAC [mem_eq_refl_thm]
-);
-
-val m0_non_r_eq_trans_thm = Q.store_thm ("m0_non_r_eq_trans_thm",
-`!s1 s2 s3 region.
-    m0_non_r_eq region s1 s2 /\
-    m0_non_r_eq region s2 s3 ==>
-        m0_non_r_eq region s1 s3`,
-REPEAT GEN_TAC>>
-SIMP_TAC std_ss [m0_non_r_eq_def]>>
-METIS_TAC[ mem_eq_trans_thm]);
-
-val m0_r_eq_trans_thm = Q.store_thm ("m0_r_eq_trans_thm",
-`!s1 s2 s3 region.
-    m0_r_eq region s1 s2 /\
-    m0_r_eq region s2 s3 ==>
-        m0_r_eq region s1 s3`,
-REPEAT GEN_TAC>>
-SIMP_TAC std_ss [m0_r_eq_def]>>
-METIS_TAC[ mem_eq_trans_thm]);
-
-(*******************************************************)
-(*            NIT theorems                             *)
-(*******************************************************)
+``! s region. ((Next s).exception = NoException) ==> (no_step_flow region s =  no_flow_run_upto region s 1)``
 
 
-val NIT_STEP_TRANS_thm = Q.store_thm("NIT_STEP_TRANS_thm",
-`!r s q . NIT_STEP r s ∧ m0_non_r_eq r q s ==> NIT_STEP r q`,
-SIMP_TAC std_ss [ NIT_STEP_thm]>>
-    METIS_TAC [m0_non_r_eq_trans_thm, m0_non_r_eq_antisym_thm ]);
-(*
-val NIF_STEP_to_UNION_thm = Q.store_thm ("NIF_STEP_to_UNION_thm",
-    `! s region1 region2. NIT_STEP_to region1 s  /\ NIT_STEP_to region2 s ==> 
-                          NIT_STEP_to (region1 UNION region2) s`,
-    cheat
-    (*
-    the idea was to do a conterposition prof
+SIMP_TAC (std_ss++boolSimps.LET_ss) [
+                 no_step_flow_from_def, no_step_flow_to_def,
+                 no_flow_run_upto_def, no_step_flow_def, M0_MODEL_def, RunM0_SEQUENCE_THM, M0_MODEL_def] 
 
-    SIMP_TAC std_ss [PULL_FORALL, NIT_STEP_def, NIT_STEP_to_def, NIT_STEP_from_def]>>
-	     REPEAT STRIP_TAC>>
-	     Q.PAT_X_ASSUM `!a b._` (MP_TAC o Q.SPECL [`s'`, `s'`])>>
-	     REPEAT STRIP_TAC
-	     
-    Cases_on `m0_r_eq (region1 ∪ region2) s' (Next s')`>>ASM_SIMP_TAC std_ss []
+SIMP_TAC (std_ss) [PULL_FORALL]
+SIMP_TAC (std_ss++CONJ_ss) [DECIDE ``!i.(0n< i /\ i <=1) ==> (i=1)``]
+ONCE_REWRITE_TAC [ DECIDE ``1n =(SUC 0n)``]
+ASM_SIMP_TAC (std_ss++LET_ss) [RunM0_def]
+EQ_TAC
+>-(
 
-    nagate the conscusions 
-    ` ~ m0_r_eq region1 s' (Next s')` by cheat
-    ` ~ m0_r_eq region2 s' (Next s')` by cheat
-    and get negation of assumptions
+REPEAT STRIP_TAC>>
 
-    `~(m0_non_r_eq region1 s s')` by METIS_TAC []
-    `~(m0_non_r_eq region2 s s')` by METIS_TAC []
+)
+DB.match [] ``((!a._)<=> (!a._) )=(!a._<=>_)``
 
-    and then show the contradiction
-   REPEAT ( Q.PAT_X_ASSUM `_==>_` (fn x=> ALL_TAC))
-   REPEAT ( PAT_X_ASSUM ``~ m0_r_eq _ _ (Next s')`` (fn x=> ALL_TAC))
-   ( PAT_X_ASSUM ``_`` MP_TAC)
-   REWITE_TAC []
 
-   ONCE_SIMP_TAC (std_ss) [m0_non_r_eq_def]
-   
-   def_SIMP_TAC (std_ss++pred_setLib.PRED_SET_ss) [m0_non_r_eq_def, mem_eq_def, PULL_EXISTS, PULL_FORALL]
-   REPEAT STRIP_TAC
-   
-   PAT_ASSUM ``!x._`` (MP_TAC o (Q.SPEC `x'`))>>
-   PAT_ASSUM ``!x._`` (MP_TAC o (Q.SPEC `x`))
-   
-   *)
-);
 
-val NIF_STEP_from_UNION_thm = Q.store_thm ("NIF_STEP_from_UNION_thm",
-    `! s region1 region2. NIT_STEP_from region1 s  /\ NIT_STEP_from region2 s ==> 
-                          NIT_STEP_from (region1 UNION region2) s`,
-    cheat
-);
+STRIP_TAC
 
-val NIF_STEP_UNION_thm = Q.store_thm ("NIF_STEP_UNION_thm",
-    `! s region1 region2. NIT_STEP region1 s  /\ NIT_STEP region2 s ==> 
-                          NIT_STEP (region1 UNION region2) s`,
-    cheat
-);
-*)
+	Q.PAT_X_ASSUM `!x:m0_state x1:m0_state._` (fn x =>
+            MP_TAC (SPECL [``s':m0_state``, ``s':m0_state``] x))>>
+	ASM_SIMP_TAC std_ss []
+	
 
+
+    REPEAT STRIP_TAC>>(
+	`i'=1` by DECIDE_TAC>>
+	FULL_SIMP_TAC (arith_ss ++ boolSimps.LET_ss) [NEXT_REL_EQ, NextStateM0_def, progTheory.rel_sequence_def
+	]>>
+	Q.PAT_X_ASSUM `!x:num._` (fn x => MP_TAC (SPEC ``0:num`` x))>>
+	Q.PAT_X_ASSUM `!x:num._` (fn x => MP_TAC (SPEC ``0:num`` x))>>
+	Q.PAT_X_ASSUM `!x:m0_state._` (fn x =>
+            MP_TAC (SPEC ``(seq' (0:num)):m0_state`` x))>>
+	Q.PAT_X_ASSUM `!x:m0_state._` (fn x =>
+            MP_TAC (SPEC ``(seq' (0:num)):m0_state`` x))>>
+	FULL_SIMP_TAC (std_ss) [m0_non_r_eq_def]>>
+	METIS_TAC []
+)
+
+
+SIMP_TAC (std_ss++boolSimps.LET_ss) [
+                 no_step_flow_from_def, no_step_flow_to_def,
+                 no_flow_run_upto_def, no_step_flow_def, M0_MODEL_def]>>
+
+REPEAT STRIP_TAC>>
+EQ_TAC
+>-(
+    REPEAT STRIP_TAC>>(
+	`i'=1` by DECIDE_TAC>>
+	FULL_SIMP_TAC (arith_ss ++ boolSimps.LET_ss) [NEXT_REL_EQ, NextStateM0_def, progTheory.rel_sequence_def
+	]>>
+	Q.PAT_X_ASSUM `!x:num._` (fn x => MP_TAC (SPEC ``0:num`` x))>>
+	Q.PAT_X_ASSUM `!x:num._` (fn x => MP_TAC (SPEC ``0:num`` x))>>
+	Q.PAT_X_ASSUM `!x:m0_state._` (fn x =>
+            MP_TAC (SPEC ``(seq' (0:num)):m0_state`` x))>>
+	Q.PAT_X_ASSUM `!x:m0_state._` (fn x =>
+            MP_TAC (SPEC ``(seq' (0:num)):m0_state`` x))>>
+	FULL_SIMP_TAC (std_ss) [m0_non_r_eq_def]>>
+	METIS_TAC [])
+)>>
+
+STRIP_TAC>>
+STRIP_TAC>>
+
+
+Q.ABBREV_TAC `(seq = RunM0 s )`>>
+Q.ABBREV_TAC `(seq' = RunM0 s')`
+ 
+FULL_SIMP_TAC arith_ss [RunM0_SEQUENCE_THM]
+Q.PAT_X_ASSUM `!s' i'._` (fn x => MP_TAC (SPECL 
+    [``s':m0_state``, 
+     ``1n``
+    ] x))>>
+
+
+
+STRIP_TAC
+REWRITE_TAC [ DECIDE ``1= SUC 0`` ]
+ASM_SIMP_TAC (std_ss++LET_ss) [RunM0_def]
+
+IF_CASES_TAC
+
+REPEAT STRIP_TAC
+
+FULL_SIMP_TAC std_ss []
+`Next`
+
+
+Q.PAT_X_ASSUM `!x:num._` (fn x => MP_TAC (SPEC 
+    ``if 0:num then s:m0_state else 
+    if 1 then (Next s) 
+    else (Next s)`` x))>>
+
+DB.find "NextStateM0"
+DB.find "rel_sequence"
+
+SIMP_CONV (bool_ss++boolSimps.LET_ss++boolSimps.UNWIND_ss) [PULL_EXISTS, rel_sequence_def, NEXT_REL_EQ, NextStateM0_def] ``rel_sequence (NEXT_REL $= NextStateM0) seq s`` 
 
 (*****************************)
-(*   Run & equance stuff     *)
-(*****************************)
 
-
-val M0_SEQUENCE_THM = prove(``! seq s. rel_sequence (NEXT_REL $= NextStateM0) seq s <=>
+val M0_SEQUENCE_THM = prove(`` rel_sequence (NEXT_REL $= NextStateM0) seq s <=>
   (seq 0 = s) ∧ !n. if (Next(seq n)).exception = NoException then seq (n+1) = Next (seq n) else seq (n+1) = seq n``,
     SIMP_TAC (std_ss++boolSimps.LET_ss++boolSimps.COND_elim_ss) [
 	DECIDE ``SUC n = n + 1n``, rel_sequence_def, NEXT_REL_EQ, NextStateM0_def]>>
     METIS_TAC[]);
+
+
+val RunM0_def = Define `RunM0 s0 k = if k=0n then s0 
+                                 else case (NextStateM0 s0) of 
+                                   NONE   => s0 
+                                 | SOME (s1)=> RunM0 s1 (k-1)`
 
 val RunM0_def = Define `(RunM0 s 0n = s) /\
                          (RunM0 s k = let 
                            s' = RunM0 s (k-1)
                         in if (Next (s')).exception = NoException 
                            then Next(s')
-                           else s')`;
+                           else s')`
 
 
 val RunM0_SEQUENCE_THM = prove(
@@ -257,24 +237,56 @@ val RunM0_SEQUENCE_THM = prove(
     REPEAT STRIP_TAC >-  
     (SIMP_TAC std_ss [RunM0_def])>>
     IF_CASES_TAC>> ASM_SIMP_TAC (arith_ss++LET_ss) [RunM0_def, DECIDE ``n+1=SUC n``]
-);
+)
+
+    
+PAT_X_ASSUM ``!a._`` (fn x=> MP_TAC (SPECL [``0n``] x))
+
+``let v (a:num) (b:num) = a+b in 
+( 1n v 3n)``
+ME
+DB.match [] ``rel_sequence r seq s``
+DB.find "NOW_def"
+DB.find "TEMPORAL_def"
+``! s seq.  (rel_sequence (NEXT_REL $= NextStateM0) seq s) /\ => (seq = (RunM0 s))``
+IF_CASES_TAC>>
 
 
-val SEQUENCE_EXISTS_THM = Q.store_thm(
-    "SEQUENCE_EXISTS_THM",
-    `!s. ?seq. (rel_sequence (NEXT_REL $= NextStateM0) seq s)`,
-	STRIP_TAC>>
-	Q.EXISTS_TAC `RunM0 s`>>
-	SIMP_TAC std_ss [RunM0_SEQUENCE_THM]);
+Induct_on `x`
+
+FULL_SIMP_TAC (bool_ss) [m0_non_r_eq_def ]
+
+ASM_SIMP_TAC std_ss[]
+
+
+ASM_REWRITE_TAC []
+REV_FULL_SIMP_TAC std_ss []
+ASM_SIMP_TAC std_ss []
+
+SIMP_TAC arith_ss [, (GEN_ALL o DECIDE) ``(0<i:num) /\ (i<=1) ==> (i=1)``]
+
+EQ_TAC
+STRIP_TAC
+SIMP_TAC (std_ss++CONJ_ss) [(DECIDE) ``((0<i':num) /\ (i'<=1)) ==> (i'=1)``]
+
+set_trace "simplifier" 0;
+set_trace "simplifier" 2;
+Ho_Rewrite.ONCE_REWRITE_TAC [MONO_AND]
 
 
 
-(* UART specific shite*)
+
+
+
+
+
+(* uart specific *)
+
 val uart_region_def = Define`
 (* TODO: change to bit masking? *)
 uart_region = {addr| addr >= 0x40002000w /\ addr <= 0x4000256Cw}
 `;
-(*
+
 
 val no_if_to_uart_def = Define`
 no_if_to_uart s = no_flow_to uart_region s`;
@@ -411,5 +423,3 @@ val nif_to_addr_def = Define`
 val if_to_addr_def = Define`
     if_to_addr_def a s = ?s'. (m0_non_addr_eq a s s' ) /\ ~(m0_non_addr_eq a (Next s) (Next s'))
 `;
-*)
-val _ = export_theory();

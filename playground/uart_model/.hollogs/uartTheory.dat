@@ -1,0 +1,82 @@
+Specializing fetch: 2 -> 2(2)
+Specializing decode Thumb: 82 -> 82(82)
+Specializing decode Thumb-2: 1 -> 1(1)
+Specializing decode Thumb (fallback): 1 -> 1(1)
+Specializing decode Thumb-2 (fallback): 1 -> 1(1)
+Specializing eval: 72 -> 72(72)
+Specializing eval: 72 -> 72(72)
+<<HOL message: Created theory "uart">>
+Saved theorem _____ "datatype_buffer"
+Saved theorem _____ "buffer_11"
+Saved theorem _____ "buffer_nchotomy"
+Saved theorem _____ "buffer_Axiom"
+Saved theorem _____ "buffer_induction"
+Saved theorem _____ "buffer_case_cong"
+Saved theorem _____ "buffer_case_eq"
+<<HOL message: Defined type: "buffer">>
+Saved definition __ "Buffer_def"
+Saved definition __ "Pop_def"
+Saved definition __ "Push_def"
+Saved theorem _____ "datatype_uart_state"
+Saved theorem _____ "uart_state_11"
+Saved theorem _____ "uart_state_nchotomy"
+Saved theorem _____ "uart_state_Axiom"
+Saved theorem _____ "uart_state_induction"
+Saved theorem _____ "uart_state_case_cong"
+Saved theorem _____ "uart_state_case_eq"
+<<HOL message: Defined type: "uart_state">>
+Saved theorem _____ "num2uart_mmap_reg_uart_mmap_reg2num"
+Saved theorem _____ "uart_mmap_reg2num_num2uart_mmap_reg"
+Saved theorem _____ "num2uart_mmap_reg_11"
+Saved theorem _____ "uart_mmap_reg2num_11"
+Saved theorem _____ "num2uart_mmap_reg_ONTO"
+Saved theorem _____ "uart_mmap_reg2num_ONTO"
+Saved theorem _____ "num2uart_mmap_reg_thm"
+Saved theorem _____ "uart_mmap_reg2num_thm"
+Saved theorem _____ "uart_mmap_reg_EQ_uart_mmap_reg"
+Saved theorem _____ "uart_mmap_reg_case_def"
+Saved theorem _____ "datatype_uart_mmap_reg"
+Saved theorem _____ "uart_mmap_reg_nchotomy"
+Saved theorem _____ "uart_mmap_reg_Axiom"
+Saved theorem _____ "uart_mmap_reg_induction"
+Saved theorem _____ "uart_mmap_reg_case_cong"
+Saved theorem _____ "uart_mmap_reg_case_eq"
+<<HOL message: Defined type: "uart_mmap_reg">>
+Saved theorem _____ "datatype_uart_reg_event"
+Saved theorem _____ "uart_reg_event_11"
+Saved theorem _____ "uart_reg_event_distinct"
+Saved theorem _____ "uart_reg_event_nchotomy"
+Saved theorem _____ "uart_reg_event_Axiom"
+Saved theorem _____ "uart_reg_event_induction"
+Saved theorem _____ "uart_reg_event_case_cong"
+Saved theorem _____ "uart_reg_event_case_eq"
+<<HOL message: Defined type: "uart_reg_event">>
+Saved theorem _____ "datatype_io_event"
+Saved theorem _____ "io_event_11"
+Saved theorem _____ "io_event_distinct"
+Saved theorem _____ "io_event_nchotomy"
+Saved theorem _____ "io_event_Axiom"
+Saved theorem _____ "io_event_induction"
+Saved theorem _____ "io_event_case_cong"
+Saved theorem _____ "io_event_case_eq"
+<<HOL message: Defined type: "io_event">>
+Saved definition __ "nRF51_uart_mmap_def"
+Saved definition __ "nRF51_uart_mmap'_def"
+Saved definition __ "nRF51_uart_initial_state_def"
+Saved definition __ "m0u_r_eq_def"
+Saved definition __ "m0u_non_r_eq_def"
+Saved definition __ "m0u_m0_non_r_eq_def"
+Saved theorem _____ "m0u_r_eq_refl_thm"
+Saved theorem _____ "m0u_non_r_eq_refl_thm"
+Saved theorem _____ "m0u_r_eq_antisym_thm"
+Saved theorem _____ "m0u_non_r_eq_antisym_thm"
+Saved theorem _____ "m0u_r_eq_trans_thm"
+Saved theorem _____ "m0u_non_r_eq_trans_thm"
+Saved definition __ "ward_region_def"
+Saved definition __ "uart_r_def"
+Saved definition __ "uart_next_cpu_def"
+Saved definition __ "m0u_Next_def"
+Saved definition __ "NEX_def"
+Saved theorem _____ "AXI"
+Exporting theory "uart" ... done.
+Theory "uart" took 3.2s to build

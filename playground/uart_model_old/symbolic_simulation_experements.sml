@@ -3,12 +3,8 @@ loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/step"::(!loadPath));
 open m0_stepLib
      val () = print_instructions () 
      val ev = thumb_step (true, true)  
-     val ev_hex = thumb_step_hex (true, true)  
-	
      val ev_code = thumb_step_code (true, true)
      ev_code `bx lr`
-
-    
 (*
  output
      [[
@@ -25,6 +21,6 @@ open m0_stepLib
        count := s.count + 3; pcinc := 2w|>)]]: *)
 
      ev "ADD (pc)"
-     ev "UXTH"
-     (ev_hex "0xEE32" )
+     ev "BX"
+     
      m0_progTheory.M0_IMP_SPEC
