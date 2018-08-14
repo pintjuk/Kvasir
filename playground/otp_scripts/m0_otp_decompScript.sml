@@ -100,8 +100,6 @@ m0_prog.MOVE_TO_M0_CODE_POOL
 Drule.SPECL [``(p+12w) :word32``, ``0x1fff7w :word32`` ] m0_progTheory.MOVE_TO_M0_CODE_POOL
 
 
-
-
 val (m0_is_seq_in_order_th, m0_is_seq_in_order_defs) = m0_decompile "m0_is_seq_in_order" `
 2300      (*	movs	r3, #0 *)
 4281      (*	cmp	r1, r0 *)`
