@@ -9,7 +9,7 @@ loadPath := ((HOLDIR ^ "/examples/l3-machine-code/m0")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/l3-machine-code/m0/decompiler")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/l3-machine-code/common")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/machine-code/hoare-triple")::(!loadPath));
-loadPath := ((HOLDIR ^ "/examples/machine-code/hoare-triple")::(!loadPath));
+loadPath := ("/home/luceat/Documents/skola/exjobb/Kvasir/playground/otp_scripts"::(!loadPath));
 *)
 
 open progTheory;
@@ -93,6 +93,13 @@ val (m0_get_seq_no_th, m0_get_seq_no_defs) = m0_decompile "m0_get_seq_no" `
 `;
 
 val _ = Theory.save_thm("m0_hoare_get_seq", m0_get_seq_no_th);
+MOVE_TO_M0_CODE_POOL
+
+DB.find "MOVE_TO_M0_CODE_POOL"
+m0_prog.MOVE_TO_M0_CODE_POOL
+Drule.SPECL [``(p+12w) :word32``, ``0x1fff7w :word32`` ] m0_progTheory.MOVE_TO_M0_CODE_POOL
+
+
 
 
 val (m0_is_seq_in_order_th, m0_is_seq_in_order_defs) = m0_decompile "m0_is_seq_in_order" `
@@ -102,23 +109,37 @@ val (m0_is_seq_in_order_th, m0_is_seq_in_order_defs) = m0_decompile "m0_is_seq_i
 da04      (*	bge.n	148 <is_seq_in_order+0x10> *)
 4a03      (*	ldr	r2, [pc, #12]	; (14c <is_seq_in_order+0x14>) *)
 
-get_spec "4a03" []
+val m0_is_seq_in_order4_th = SPEC ``0x3ffew :word32`` (GEN ``w0 :word32`` (get_spec "4a02" []));
+prove(``(DISJOINT
+           (m0_instr (align 2 (pc + 4w) + 8w,data_to_thumb2 16382w))
+           (m0_instr (pc,INL 18946w)))``,
+  SIMP_TAC (arith_ss++pred_setLib.PRED_SET_ss++wordsLib.WORD_ss) 
+            [m0_progTheory.data_to_thumb2_def, alignmentTheory.align_shift,
+             m0_progTheory.m0_instr_def] >>
+  BBLAST_TAC
+);
+REWRITE_RULE 
 
+DB.match [] ``m0_instr``
 
-m0_stage_1 "test" `da04`
+DB.find "DISJOINT"
 
-m0_stage_1 "test" `4a03`
+val (m0_is_seq_in_order1_th, m0_is_seq_in_order1_defs) = m0_decompile "m0_is_seq_in_order1" `
+0003     (* 	movs	r3, r0 *)
+2000     (* 	movs	r0, #0 *)
+4299     (* 	cmp	r1, r3 *)`
 
-val (m0_is_seq_in_order_th, m0_is_seq_in_order_defs) = m0_decompile "m0_is_seq_in_order" `
-0fc1      (*	lsrs	r1, r0, #31 *)
-4282      (*	cmp	r2, r0 *)
-414b      (*	adcs	r3, r1 *)
-b2db      (*	uxtb	r3, r3 *)`
-0018      (*	movs	r0, r3 *)
-`
+da03     (* 	bge.n	164 <is_seq_in_order+0x10> *)
 
-4770      (*	bx	lr *)
-0001fff7 	(*.word	0x0001fff7 *)
+4a02     (* 	ldr	r2, [pc, #8]	; (168 <is_seq_in_order+0x14>) *)
+
+val (m0_is_seq_in_order4_th, m0_is_seq_in_order4_defs) = m0_decompile "m0_is_seq_in_order4" `
+429a     (* 	cmp	r2, r3 *)
+4140     (* 	adcs	r0, r0 *)
+b2c0     (* 	uxtb	r0, r0 *)`
+4770     (* 	bx	lr *)
+46c0     (* 	nop			; (mov r8, r8) *)`
+00003ffe (*	.word	0x00003ffe *)`
 
 
 (*

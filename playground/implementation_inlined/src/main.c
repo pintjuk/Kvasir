@@ -4,7 +4,7 @@
 #include "crypto.h"
 
 void test_fill_key(char *key){
-  for(int i = 0; i < 8 * 16383; i++){
+  for(int i = 0; i < 8 * 16128; i++){
     key[i] = i*i*i % 256;
   }
 }
@@ -14,7 +14,7 @@ void main ( ) {
     //Send Welcome
     uart_send_string ("\nBBC micro:bit echo\n");
 
-    char key[8*16383];
+    char key[8*16128];
     test_fill_key(key);
 
     // process messages and encrypt

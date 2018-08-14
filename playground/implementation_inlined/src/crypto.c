@@ -13,7 +13,7 @@ void zero_data_headers(char *buffer);
 void write_to_uart(char *buffer);
 
 int test(int meh);
-const unsigned int MAX_SEQ_NO = 16383;
+const unsigned int MAX_SEQ_NO = 16128;
 
 /* Public Functions */
 void process_messages(char *key){
@@ -22,7 +22,7 @@ void process_messages(char *key){
     unsigned int last_seq_no = 0;
 
     //Start echoing
-    while (last_seq_no < MAX_SEQ_NO) {
+    while (last_seq_no <= MAX_SEQ_NO) {
       //Read a byte from uart
       unsigned int v = uart_read ();
 
@@ -51,7 +51,7 @@ void process_messages(char *key){
 /*Private Functions*/
 
 int __attribute__ ((noinline)) is_seq_in_order(int seq_no, int last_seq_no){
-  return (last_seq_no < seq_no) && (seq_no < MAX_SEQ_NO);
+  return (last_seq_no < seq_no) && (seq_no <= MAX_SEQ_NO);
 }
 
 int valid_msg(char *buffer, int seq_no, int last_seq_no){
