@@ -9,12 +9,14 @@ loadPath := ((HOLDIR ^ "/examples/l3-machine-code/m0")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/l3-machine-code/m0/decompiler")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/l3-machine-code/common")::(!loadPath));
 loadPath := ((HOLDIR ^ "/examples/machine-code/hoare-triple")::(!loadPath));
+loadPath := ((HOLDIR ^ "/examples/machine-code/hoare-triple")::(!loadPath));
 *)
 
 open progTheory;
 open m0_decompLib;
 open helperLib;
-
+open m0_progLib;
+open otp_utilLib;
 
 val _ = new_theory "m0_otp_decomp";
 
@@ -90,10 +92,40 @@ val (m0_get_seq_no_th, m0_get_seq_no_defs) = m0_decompile "m0_get_seq_no" `
  18c0   (* adds	r0, r0, r3		*)
 `;
 
-val th = Theory.save_thm("m0_hoare_get_seq", m0_get_seq_no_th);
+val _ = Theory.save_thm("m0_hoare_get_seq", m0_get_seq_no_th);
+
+
+val (m0_is_seq_in_order_th, m0_is_seq_in_order_defs) = m0_decompile "m0_is_seq_in_order" `
+2300      (*	movs	r3, #0 *)
+4281      (*	cmp	r1, r0 *)`
+
+da04      (*	bge.n	148 <is_seq_in_order+0x10> *)
+4a03      (*	ldr	r2, [pc, #12]	; (14c <is_seq_in_order+0x14>) *)
+
+get_spec "4a03" []
+
+
+m0_stage_1 "test" `da04`
+
+m0_stage_1 "test" `4a03`
+
+val (m0_is_seq_in_order_th, m0_is_seq_in_order_defs) = m0_decompile "m0_is_seq_in_order" `
+0fc1      (*	lsrs	r1, r0, #31 *)
+4282      (*	cmp	r2, r0 *)
+414b      (*	adcs	r3, r1 *)
+b2db      (*	uxtb	r3, r3 *)`
+0018      (*	movs	r0, r3 *)
+`
+
+4770      (*	bx	lr *)
+0001fff7 	(*.word	0x0001fff7 *)
+
+
+(*
+ b510   (* push	{r4, lr}	*)
+*)
 
 val (m0_encrypt_th, m0_encrypt_defs) = m0_decompile "m0_encrypt"`
- b510   (* push	{r4, lr}	*)
  00c0   (* lsls	r0, r0, #3	*)
  5c14   (* ldrb	r4, [r2, r0]	*)
  788b   (* ldrb	r3, [r1, #2]	*)
@@ -173,43 +205,64 @@ val (driver_uart_read_th, driver_uart_read_defs) = m0_decompile "driver_uart_rea
 `;
 *)
 
-val (m0_valid_msg_th, m0_valid_msg_defs) = m0_decompile "m0_valid_msg" ` 
- b5f8        (*	push	{r3, r4, r5, r6, r7, lr} *)
- 0007       (*	movs	r7, r0 *)
- 000c       (*	movs	r4, r1 *)
- 0016       (*	movs	r6, r2 *)
 
-` 
+(* VALID_MSG FUNCTION, needs to be manually composed in mls *)
 
- insert: m0_validate_seqh
- (*  f7ff ffe2 *) (*	bl	162 <validate_seq_headers> *)
- 0005       (*	movs	r5, r0 *)
- 0038       (*	movs	r0, r7 *)
- insert: m0_validate_datah
- (*f7ff ffe3 *)  (*	bl	16c <validate_data_headers> *)
- 2300       (*	movs	r3, #0 *)
- 42a6       (*	cmp	r6, r4 *)
- da04       (*	bge.n	1b6 <valid_msg+0x24> *)
- 4a07       (*	ldr	r2, [pc, #28]	; (1cc <valid_msg+0x3a>) *)
- 0fe1       (*	lsrs	r1, r4, #31 *)
- 42a2       (*	cmp	r2, r4 *)
- 414b       (*	adcs	r3, r1 *)
- b2db       (*	uxtb	r3, r3 *)
- 2d00       (*	cmp	r5, #0 *)
- d005       (*	beq.n	1c6 <valid_msg+0x34> *)
- 2800       (*	cmp	r0, #0 *)
- d002       (*	beq.n	1c4 <valid_msg+0x32> *)
- 0018       (*	movs	r0, r3 *)
- 1e43       (*	subs	r3, r0, #1 *)
- 4198       (*	sbcs	r0, r3 *)
- (* bdf8 *)       (*	pop	{r3, r4, r5, r6, r7, pc} *)
- 0028       (*	movs	r0, r5 *)
- e7fc       (*	b.n	1c4 <valid_msg+0x32> *)
- 46c0       (*	nop			; (mov r8, r8) *)
- (* 0001fff7 *)	(* .word	0x0001fff7 *)
-`;
+val m0_bx = m0_decompLib.m0_ABBREV_CALL "bx" (get_spec "4770" []);
+
+val (m0_valid_msg1_th, m0_valid_msg1_defs) = m0_decompile "m0_valid_msg1" ` 
+b5f8      	(* push	{r3, r4, r5, r6, r7, lr} *)
+000d      	(* movs	r5, r1 *)
+0016      	(* movs	r6, r2 *)
+0007      	(* movs	r7, r0 *)`
+
+(* f7ff ffe2 	 bl	17a <validate_seq_headers> *)
+val (_, (bl_to_val_seqh, _, _), _) = (hd (m0_decompLib.m0_stage_1 "bl_to_val_seqh" `f7ff ffe2`));
+
+val (m0_valid_msg2_th, m0_valid_msg2_defs) = m0_decompile "m0_valid_msg2" `
+0004      	(* movs	r4, r0 *)
+0038      	(* movs	r0, r7 *)`
 
 
+(* f7ff ffe3 	bl	184 <validate_data_headers> *)
+val (_, (bl_to_val_datah, _, _), _) = (hd (m0_decompLib.m0_stage_1 "bl_to_val_datah" `f7ff ffe3`));
+
+
+val (m0_valid_msg3_th, m0_valid_msg3_defs) = m0_decompile "m0_valid_msg3" `
+0031      	(* movs	r1, r6 *)
+4004      	(* ands	r4, r0 *)
+0028      	(* movs	r0, r5 *)`
+
+
+(* f7ff ffb8 	 bl	138 <is_seq_in_order> *)
+val (_, (bl_to_seq_order, _, _), _) = (hd (m0_decompLib.m0_stage_1 "bl_to_seq_order" `f7ff ffb8`));
+
+
+val (m0_valid_msg3_th, m0_valid_msg3_defs) = m0_decompile "m0_valid_msg3" `
+4020      	(* ands	r0, r4 *)`
+
+(* Special handling of POP pc *)
+(* bdf8      	 pop	{r3, r4, r5, r6, r7, pc} *)
+val pop_from_valid_msg = m0_decompLib.m0_ABBREV_CALL "pop" (get_spec "bdf8" []);
+
+
+
+(* 
+val m0_valid_msg_th_abbrev = m0_decompLib.m0_ABBREV_CALL "new@" m0_valid_msg_th;
+val m0_validate_seqh_th_abbrev = m0_decompLib.m0_ABBREV_CALL "new2@" m0_validate_seqh_th;
+
+val compose_test = decompilerLib.SPEC_COMPOSE_RULE [m0_valid_msg_th_abbrev, 
+                                                    bl_to_val_seqh, 
+                                                    m0_validate_seqh_th_abbrev,
+                                                    test_bx5];
+val meh = SIMP_RULE (std_ss++pred_setLib.PRED_SET_ss) [] compose_test
+SIMP_RULE (std_ss++w2w_ss) [] compose_test;
+
+val unabbrevd_compose = decompilerLib.UNABBREV_ALL compose_test
+
+*)
+
+(*
 val (otp_process_messages_th, otp_process_messages_defs) = m0_decompile "m0_process_messages"`
  (*b5f0 *)      (* 	push	{r4, r5, r6, r7, lr} *)
  2700      (* 	movs	r7, #0 *)
@@ -261,7 +314,7 @@ val (otp_process_messages_th, otp_process_messages_defs) = m0_decompile "m0_proc
  e7d1      (* 	b.n	26c <process_messages+0x8> *)
  b007      (* 	add	sp, #28 *)
 `; 
-
+*)
 (*
 val (otp_process_messages1_th, otp_process_messages1_defs) = m0_decompile "m0_process_messages1"`
  (* b5f0 *)      (* 	push	{r4, r5, r6, r7, lr} *)
@@ -269,171 +322,14 @@ val (otp_process_messages1_th, otp_process_messages1_defs) = m0_decompile "m0_pr
  b087      (* 	sub	sp, #28 *)
  9001      (* 	str	r0, [sp, #4] *)`;
 
-
-val (test1_th, test1_defs) = m0_decompile "test_1"`
-2700
-`;
-
-val (test2_th, test2_defs) = m0_decompile "test_2"`
-b087
-`;
-
-val (testcom_th, testcom_defs) = m0_decompile "test_com"`
-2700
-b087
-`;
-
-val (testcom1_th, testcom1_defs) = m0_decompile "test_com1"`
-insert: test_1
-insert: test_2
-`;
-
-core_decompilerLib.compose test1_th test2_th;
-
-
-decompilerLib.get_decompiled "test_com";
-decompilerLib.add_decompiled ("roberto", test1_th, 2, SOME 2);
-val (testcom1_th, testcom1_defs) = m0_decompile "test_com1"`
-insert: roberto
-insert: test_2
-`;
-
-type_of ``test_com``;
-
- val test1_simp = SIMP_RULE (arith_ss ++ wordsLib.WORD_ss) [LET_DEF, test1_defs] test1_th;
-
- val test2_simp = SIMP_RULE (arith_ss ++ wordsLib.WORD_ss) [LET_DEF, test2_defs] test2_th;
-
-val thm_spec = SPECL [``r13:word32``, ``p+2w:word32``] (GEN_ALL test2_th);
-val thm_spec1 = SPEC_ALL thm_spec;
-
-val tst1tst2 = SPEC_COMPOSE_RULE [test1_th, thm_spec1]
-
-type_of ``m0_COUNT``;
- val test2_simp = SIMP_RULE (arith_ss ++ wordsLib.WORD_ss) [LET_DEF, test2_defs] test2_th;
-
-val otp_pc_specced_msgs1_th = SPEC ``0x1AAw :word32`` (GEN ``p :word32`` otp_process_messages1_th)
-
-val thm1a = SIMP_RULE (arith_ss ++ wordsLib.WORD_ss) [LET_DEF, otp_process_messages1_defs] otp_pc_specced_msgs1_th
-
-
 open core_decompilerLib
 
-compose
 
-core_decompilerLib
-val th2a = replace_new_vars ("s" ^ int_to_string (varname_next ())) mupp4
+
+val x = m0_decompLib.m0_stage_1 "btest" `e002`
+
 val tst2 = SPEC_COMPOSE_RULE [thm1a, mupp4]
 
-
-open helperLib
-list_dest dest_sep_disj q
-val th1 = th2
-val th2 = mupp5
-     val (_,_,_,q) = dest_spec (concl th1)
-     val (_,p,_,_) = dest_spec (concl th2)
-     val vs = list_dest dest_sep_exists q
-     val (vs,q) = (butlast vs,last vs)
-     val (xs1,xs2,ys1,ys2) = helperLib.match_and_partition (list_dest dest_star q) (list_dest dest_star p)
-     val ty = type_of q
-     val (m,i) = match_term (list_mk_star ys1 ty) (list_mk_star xs1 ty)
-     val th2 = INST m (INST_TYPE i th2)
-
-type_of dest_comb (concl thm1a)
-val (a, b) = dest_comb (concl thm1a)
-val (c, d) = dest_comb b
-val (e, f) = dest_comb c
-
-val (g, h) = dest_comb f
-
-val xr = dest_sep_disj g
-val xl = dest_star g
-type_of g
-
 *)
-open m0;
-
-open bitTheory;
-
-open BitsN;
-
-val IS_FIRST_BL_def = Define `isFirstBl (x:word16) = ((x && 0xF800w) = 0xF000w)`
-
-val IS_SECOND_BL_def = Define `isSecondBl (y: word16) = ((y && 0xF800w) = 0xF800w)`
-
-val BL_OFFSET_def = Define `(bl_offset (x :word16) (y :word16)) : word32 = w2w (((w2w (x && 2047w)) :word32 << 12) + ( (w2w (y && 2047w)) :word32 << 1) + 4w)`
-
-
-val m0_bl_pre_def = Define `m0_bl_pre (r14, count, dmem, m) = T`
-
-
-(* sanity check, for offset 0 *)
-(*
-prove(``bl_offset 63488w 61440w = 0w``,
-  SIMP_TAC (arith_ss ++ wordsLib.WORD_ss) [BL_OFFSET_def]
-); *)
-
-open m0_core_decompTheory;
-open m0_progTheory;
-open sumTheory;
-open decompilerLib;
-
-val BL_HOARE_THM = prove(``
-   !x y.
-   isFirstBl(x) /\ isSecondBl(y) ==>
-   (SPEC M0_MODEL (
-     ((~m0_NZCV) * (m0_COUNT (count :num)) * (m0_PC (p :word32)) * 
-      (m0_MEMORY dmem m) * (m0_REG RName_LR r14) *
-      (cond (m0_bl_pre (r14, count, dmem, m)) : (m0_component # m0_data -> bool) -> bool)))
-     {(p, INL x); ((p+(2w :word32)), INL y)}
-     ((~m0_NZCV) * (m0_COUNT (count + 2)) * (m0_PC (p+4w)) * (m0_MEMORY dmem m) * 
-      (m0_REG RName_LR (p + (bl_offset x y)))
-   ))
-``,
-cheat
-);
-
-
-val BL_HOARE_THM = prove(``
-   !x y.
-    let m0_bl_pre in
-    (SPEC M0_MODEL (
-     ((~m0_NZCV) * (m0_COUNT (count :num)) * (m0_PC (p :word32)) * 
-      (m0_MEMORY dmem m) * (m0_REG RName_LR r14) *
-      (cond (m0_bl_pre (r14, count, dmem, m)) : (m0_component # m0_data -> bool) -> bool)))
-     {(p, INL x); ((p+(2w :word32)), INL y)}
-     ((~m0_NZCV) * (m0_COUNT (count + 2)) * (m0_PC (p+4w)) * (m0_MEMORY dmem m) * 
-      (m0_REG RName_LR (p + (bl_offset x y)))
-   ))
-``,
-cheat
-);
-
-val mupp = SPEC ``0xFFE2w :word16`` (SPEC ``0xF7FFw :word16`` BL_HOARE_THM);
-
-val mupp2 = SIMP_RULE (arith_ss ++ wordsLib.WORD_ss) [IS_FIRST_BL_def, IS_SECOND_BL_def] mupp
-
-val mupp3 = SPEC ``0x1b2w :word32`` (GEN ``p :word32`` mupp2);
-
-val mupp4 = SIMP_RULE (arith_ss ++wordsLib.WORD_ss) [] mupp3
-
-(*
- bdf0      (* 	pop	{r4, r5, r6, r7, pc} *)
- 0001fff7  (*	.word	0x0001fff7 *)
-*)
-
-val BL_HOARE_THM = prove(``
-   (SPEC M0_MODEL (
-     ((~m0_NZCV) * (m0_COUNT (count :num)) * (m0_PC (p :word32)) * 
-      (m0_MEMORY dmem m) * (m0_REG RName_LR r14) *
-      (cond (m0_bl_pre (r14, count, dmem, m)) : (m0_component # m0_data -> bool) -> bool)))
-     {(p, INL x); ((p+(2w :word32)), INL y)}
-     ((~m0_NZCV) * (m0_COUNT (c + 2)) * (m0_PC (p+4w)) * (m0_MEMORY dmem m) * 
-      (m0_REG RName_LR (p + (bl_offset x y)))
-   ))
-``,
-cheat
-);
-
 
 val _ = export_theory();
