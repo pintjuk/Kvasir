@@ -1,0 +1,12 @@
+$(HOLDIR)/examples/l3-machine-code/m0/model/m0Theory
+$(HOLDIR)/examples/l3-machine-code/m0/prog/m0_progLib
+$(HOLDIR)/examples/l3-machine-code/m0/step/m0_stepLib
+$(HOLDIR)/examples/machine-code/hoare-triple/progSyntax
+$(HOLDIR)/sigobj/Overlay
+$(HOLDIR)/sigobj/Parse
+$(HOLDIR)/sigobj/pairLib
+$(HOLDIR)/sigobj/pred_setSyntax
+$(HOLDIR)/sigobj/wordsSyntax
+/home/daniil/projects/Kvasir/playground/uart_model/VC_experement
+/home/daniil/projects/Kvasir/playground/uart_model/m0u_progTheory
+/home/daniil/projects/Kvasir/playground/uart_model/VC_experement.sml

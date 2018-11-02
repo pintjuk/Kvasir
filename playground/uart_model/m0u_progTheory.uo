@@ -13,8 +13,8 @@ $(HOLDIR)/sigobj/Thm
 $(HOLDIR)/sigobj/Type
 $(HOLDIR)/sigobj/term_grammar
 $(HOLDIR)/sigobj/type_grammar
-/home/daniil/Documents/Exjob/Kvasir/playground/uart_model/clockTheory
-/home/daniil/Documents/Exjob/Kvasir/playground/uart_model/m0u_progTheory
-/home/daniil/Documents/Exjob/Kvasir/playground/uart_model/m0u_progTheory
-/home/daniil/Documents/Exjob/Kvasir/playground/uart_model/uartTheory
-/home/daniil/Documents/Exjob/Kvasir/playground/uart_model/m0u_progTheory.sml
+/home/daniil/projects/Kvasir/playground/uart_model/clockTheory
+/home/daniil/projects/Kvasir/playground/uart_model/m0u_progTheory
+/home/daniil/projects/Kvasir/playground/uart_model/m0u_progTheory
+/home/daniil/projects/Kvasir/playground/uart_model/uartTheory
+/home/daniil/projects/Kvasir/playground/uart_model/m0u_progTheory.sml

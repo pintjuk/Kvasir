@@ -249,7 +249,8 @@ val uart_push_rbuf_def = Define `
 (*******************************************)
 (*          UART NIF                       *)
 (*******************************************)
-     
+
+(* state equevalance *)     
 val m0u_r_eq_def = Define `
     m0u_r_eq region ((s1,u1),in1,out1) ((s2, u2),in2,out2)  = 
         m0_r_eq region s1 s2 /\ (u1=u2) /\ (out1=out2) /\ (in1=in2)`;
@@ -262,6 +263,7 @@ val m0u_m0_non_r_eq_def = Define `
     m0u_m0_non_r_eq region ((s1,u1),in1,out1) s2 = 
         m0_non_r_eq region s1 s2`;
 
+(* state equevalance reflexivity, antisymetry and transitivity *)
 val m0u_r_eq_refl_thm = Q.store_thm("m0u_r_eq_refl_thm",
 `!region s. m0u_r_eq region s s`,
 
@@ -357,8 +359,7 @@ ward_region(nRF51_uart_mmap PSELRXD) UNION
 ward_region(nRF51_uart_mmap RXD) UNION
 ward_region(nRF51_uart_mmap TXD) UNION
 ward_region(nRF51_uart_mmap BAUDRATE) UNION
-ward_region(nRF51_uart_mmap CONFIG))`
-
+ward_region(nRF51_uart_mmap CONFIG))`;
 
 
 (*
@@ -485,6 +486,10 @@ val m0u_Next_def= Define
 (*          No exceptions                   *)
 (*                                          *)
 (********************************************)
+
+(* There will be no exceptions for t clock 
+   cycles executing from a state constrained by P *)
+
 val NEX_def = Define `
     NEX (P :(m0_component # m0_data -> bool) -> bool) t = ! s seq i.    
                ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
@@ -497,15 +502,19 @@ val NEX_def = Define `
 (*           Uart model theorems            *)
 (*                                          *)
 (********************************************)
-val AXI = Q.store_thm("AXI", `
-!s su.  
-(NIT_STEP uart_r s) /\ (m0u_m0_non_r_eq uart_r su s ) ==>
-             (m0u_m0_non_r_eq uart_r (m0u_Next su) (Next s))/\
-             (m0u_r_eq uart_r (m0u_Next su) su)`,
+
+val AXI = Q.store_thm("AXI", 
+`!s_m0 s_m0u.  
+(NIT_STEP uart_r s_m0) /\ (m0u_m0_non_r_eq uart_r s_m0u s_m0 ) ==>
+             (m0u_m0_non_r_eq uart_r (m0u_Next s_m0u) (Next s_m0))/\
+             (m0u_r_eq uart_r (m0u_Next s_m0u) s_m0u)`,
 
     REPEAT GEN_TAC>> 
-    Cases_on `su`>> Cases_on `r` >> Cases_on `q`>>
-
+    Cases_on `s_m0u`>>
+    rename1  `m0u_m0_non_r_eq uart_r (s_m0u,io) s_m0`>>
+    Cases_on `io` >>
+    rename1 `(m0u_Next (s_m0u,input,output))`>>
+    Cases_on `s_m0u`>>
     SIMP_TAC (std_ss++LET_ss) [m0u_Next_def, m0u_r_eq_def ,m0u_m0_non_r_eq_def, PULL_FORALL, NIT_STEP_TRANS_thm, NIT_STEP_TRANS_thm]>>
     
     METIS_TAC[

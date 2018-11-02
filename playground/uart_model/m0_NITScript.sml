@@ -10,16 +10,22 @@ open progTheory;
 
 val _ = new_theory "m0_NIT";
 
+
+(* Memory region equality
+   region is a set of addresses
+*)
 val mem_eq_def = Define`
 mem_eq region mem1 mem2 = 
    (!x. x IN region ==> ((mem1 x) = (mem2 x)))
 `;
 
+(* States are equal in the given memory region*)
 val m0_r_eq_def = Define `
 m0_r_eq region s1 s2 = 
    (mem_eq region s1.MEM s2.MEM)
 `;
 
+(* States are equevilent except for the given memery region*)
 val m0_non_r_eq_def = Define `
     m0_non_r_eq region s1 s2 = (
 	(s1.AIRCR = s2.AIRCR)/\
@@ -42,24 +48,26 @@ val m0_non_r_eq_def = Define `
 
 (** There is no flow to a memory region from the rest of the state 
     During the next tranisition
-
-    for arbitrary content of the region, the next instruciton does not change the content of the region
+    That is, next instruction does not write to the region
 **)
 val NIT_STEP_to_def = Define` 
  NIT_STEP_to region s = (
   !s'.  m0_non_r_eq region s s' ==> m0_r_eq region s' (Next s') 
- )`;
+)`;
 
 (** There is no information flow to the rest of the state from this region 
     During the next tranisition 
-    
-    Swaping out the content of the region arbitraraly does not affect the execution of the rest of the state.
+    That is, next instruction does not write to the region.
 **)
 val NIT_STEP_from_def = Define` 
  NIT_STEP_from region s = (
   !s'. m0_non_r_eq region s s'==> m0_non_r_eq region (Next s) (Next s') 
 )`;
 
+
+(* There is no flow to or from the region during the execution of next instruction.
+   That is next instruction nether writs nor reads during the next step
+*)
 val NIT_STEP_def = Define`
 NIT_STEP region s = (NIT_STEP_from region s) /\ (NIT_STEP_to region s) 
 `;
@@ -73,6 +81,11 @@ val NIT_STEP_thm = Q.store_thm ("NIT_STEP_thm",
     METIS_TAC []
 );
 
+
+(* This is our week non interference property
+   No information flow can be observed after executing T clock cycles, 
+   from a state constrained by P
+*)
 val NIT_W_def = Define`
 NIT_W region P t =   !s s' seq seq' i.   
                ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
@@ -83,6 +96,10 @@ NIT_W region P t =   !s s' seq seq' i.
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
 
+(* This is our strong non interference property
+   After executing t clock cycles no information flow to or from the region can be observed
+   in each step
+*)
 val NIT_def = Define`
 NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.   
                ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
@@ -97,6 +114,9 @@ NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.
 (*   uart eqvivalance thearems  *)
 (********************************)
 
+
+(* transitive, reflexiv and antisymetric properties of my
+ of state equevalance relations *)
 val mem_eq_refl_thm = Q.store_thm("mem_eq_refl_thm",
     `!region mem. mem_eq region mem mem `,
 	 METIS_TAC[mem_eq_def]
@@ -220,8 +240,12 @@ val NIF_STEP_UNION_thm = Q.store_thm ("NIF_STEP_UNION_thm",
 (*****************************)
 
 
-val M0_SEQUENCE_THM = prove(``! seq s. rel_sequence (NEXT_REL $= NextStateM0) seq s <=>
-  (seq 0 = s) ∧ !n. if (Next(seq n)).exception = NoException then seq (n+1) = Next (seq n) else seq (n+1) = seq n``,
+val M0_SEQUENCE_THM = prove(``
+  !seq s. rel_sequence (NEXT_REL $= NextStateM0) seq s <=>
+  (seq 0 = s) ∧ !n. if (Next(seq n)).exception = NoException 
+                    then seq (n+1) = Next (seq n)
+                    else seq (n+1) = seq n``,
+                            
     SIMP_TAC (std_ss++boolSimps.LET_ss++boolSimps.COND_elim_ss) [
 	DECIDE ``SUC n = n + 1n``, rel_sequence_def, NEXT_REL_EQ, NextStateM0_def]>>
     METIS_TAC[]);
@@ -233,7 +257,7 @@ val RunM0_def = Define `(RunM0 s 0n = s) /\
                            then Next(s')
                            else s')`;
 
-
+(*
 val RunM0_SEQUENCE_THM = prove(
 ``! s seq.
   (rel_sequence (NEXT_REL $= NextStateM0) seq s)  <=> (seq = (RunM0 s))``,
@@ -257,7 +281,7 @@ val RunM0_SEQUENCE_THM = prove(
     REPEAT STRIP_TAC >-  
     (SIMP_TAC std_ss [RunM0_def])>>
     IF_CASES_TAC>> ASM_SIMP_TAC (arith_ss++LET_ss) [RunM0_def, DECIDE ``n+1=SUC n``]
-);
+);*)
 
 
 val SEQUENCE_EXISTS_THM = Q.store_thm(
@@ -271,7 +295,6 @@ val SEQUENCE_EXISTS_THM = Q.store_thm(
 
 (* UART specific shite*)
 val uart_region_def = Define`
-(* TODO: change to bit masking? *)
 uart_region = {addr| addr >= 0x40002000w /\ addr <= 0x4000256Cw}
 `;
 (*
