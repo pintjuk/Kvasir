@@ -144,8 +144,6 @@ val m0_DOM_STAR_thm = store_thm("m0_SDOM_STAR_thm", ``
  *)
 val m0_DOM_STAR_2thm = prove(``!A B.  DOM (A * B) = (DOM A) UNION (DOM B)``, cheat);
 val m0_DOM_COND_thm = prove(``!x. DOM(cond x) = {} ``, cheat);
-val m0_DOM_
-
 
 (*
 ``DISJOINT (DOM ((m0_count 3) * {{(m0_c_MEM 0w, m0_d_word8 0w)}})) ((r2m0_c_set uart_r))``
@@ -193,9 +191,8 @@ val M0U_MODEL = Define `M0U_MODEL = (
     K F :((m0_state # uart_state) # word32 list # word32 list)-> bool
     )`;
 
-M0_MODEL_def
-val COSIM_def = Define `COSIM P c t = ! s s' seq seq' i.   
-    ((SEP_REFINE (P * (CODE_POOL m0_instr c) *  SEP_T) ($=) (STATE m0_proj) s) /\
+val COSIM_def = Define ` COSIM P t = ! s s' seq seq' i.   
+    ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
     rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
     rel_sequence (NEXT_REL $= NextStateM0U) seq' s' /\
     ~(((SND o FST) s').unpredictable)/\
@@ -203,10 +200,13 @@ val COSIM_def = Define `COSIM P c t = ! s s' seq seq' i.
 	m0u_m0_non_r_eq uart_r (seq' i) (seq i) /\
 	m0u_r_eq uart_r s' (seq' i)`;
 
+
+val cosim_def = Define `cosim P c t = COSIM ((CODE_POOL m0_instr c) * P  ) t`;
+
 val NEX_thm = Q.store_thm("NEX_thm",
     `! P t s seq i.
-	NEX P c t ==> (
-	    SEP_REFINE (P * (CODE_POOL m0_instr c) * SEP_T) $= (STATE m0_proj) s /\
+	NEX P t ==> (
+	    SEP_REFINE (P * SEP_T) $= (STATE m0_proj) s /\
 	    rel_sequence (NEXT_REL $= NextStateM0) seq s /\
 	    (seq (SUC i)).count <= s.count + t ==> 
                 ((seq i).count < (Next(seq i)).count) /\ ((Next (seq i)) = (seq(SUC i))))`,
@@ -369,16 +369,22 @@ seccond lemma for proving the TP theorem
 val TP_thm = Q.store_thm("TP_thm",
     `!P C Q c t C. 
         (SPEC M0_MODEL (P*m0_count c) C (Q*m0_count (c+t))) /\ 
-	(COSIM P t) /\  
-        (DISJOINT (DOM P) UART) /\
-        (DISJOINT (DOM Q) UART) ==>
+	(cosim (P * m0_count c) C t) ==>   
 	    (SPEC M0U_MODEL (TO_M0U_PROP (P * m0_count c)) C (TO_M0U_PROP(Q * m0_count (c+t))))`,
-    REPEAT STRIP_TAC
-           REWRITE_TAC[SPEC_def, M0U_MODEL, RUN_def]
-           Q.ABBREV_TAC `Pri = (CODE_POOL (λc. TO_M0U (m0_instr c)) C * TO_M0U_PROP (P * m0_count c))`>>
+
+           REWRITE_TAC[SPEC_def, M0U_MODEL, RUN_def]>>
+    REPEAT STRIP_TAC>>
+    
+
+FULL_SIMP_TAC std_ss [GSYM CODE_POOL_2_m0u_thm, GSYM star_2_m0u_thm]>>
+FULL_SIMP_TAC std_ss [cosim_def, COSIM_def]>>
+
+           Q.ABBREV_TAC `Pri = (CODE_POOL m0_instr C * (Q * m0_count (c + t))) * r`>>
            Q.ABBREV_TAC `Post = CODE_POOL (λc. TO_M0U (m0_instr c)) C *
                   TO_M0U_PROP (Q * m0_count (c + t))`
 
+        (DISJOINT (DOM P) UART) /\
+        (DISJOINT (DOM Q) UART) ==>
     REPEAT STRIP_TAC
     cheat);
 DB.find "CODE_POOL"
