@@ -1,4 +1,3 @@
-
  (* set_trace "simplifier" 0; *)
 
 open HolKernel Parse boolLib bossLib;
@@ -106,9 +105,12 @@ val CODE_POOL_2_m0u_thm = store_thm( "CODE_POOL_2_m0u_thm",
    SIMP_TAC std_ss [GSYM TO_M0U_def, instr_2_m0u_thm]
 );
 
+
+(*
 val count_2_m0u_thm = store_thm( "count_2_m0u_thm",
 ``!code. TO_M0U_PROP (m0_count) = CODE_POOL m0u_instr code``,
-);
+                                            
+);*)
 
 val PROP_2_m0u_RWR  = [star_2_m0u_thm, cond_2_m0u_thm, instr_2_m0u_thm, CODE_POOL_2_m0u_thm ]
 (********************************************)
@@ -366,6 +368,7 @@ seccond lemma for proving the TP theorem
 
 {P} c {Q} /\ DISJOINT (P UNION Q) UART ==> m 
 *)
+             (*
 val TP_thm = Q.store_thm("TP_thm",
     `!P C Q c t C. 
         (SPEC M0_MODEL (P*m0_count c) C (Q*m0_count (c+t))) /\ 
@@ -386,8 +389,7 @@ FULL_SIMP_TAC std_ss [cosim_def, COSIM_def]>>
         (DISJOINT (DOM P) UART) /\
         (DISJOINT (DOM Q) UART) ==>
     REPEAT STRIP_TAC
-    cheat);
-DB.find "CODE_POOL"
+    cheat);*)
 
 val WS_COSIM_thm = Q.store_thm("WS_COSIM_thm",
     `!P P' t t'. COSIM P t /\ t' < t  /\ (SEP_IMP P' P) ==> COSIM P' t'`,

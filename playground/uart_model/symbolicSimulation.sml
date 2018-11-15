@@ -1,61 +1,69 @@
 (*        
-    loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/model"::(!loadPath));
+    loadPath := ("/home/daniil/Apps/HOL/examples/l3-machine-code/m0/model"::(!loadPath));
     loadPath := ("/Home/daniil/HOL/examples/l3-machine-code/common"::(!loadPath));
-    loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/decompiler"::(!loadPath));
+    loadPath := ("/home/daniil/Apps/HOL/examples/l3-machine-code/m0/decompiler"::(!loadPath));
     loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/step"::(!loadPath));
     loadPath := ("/home/daniil/HOL/examples/l3-machine-code/m0/prog"::(!loadPath));
-
-    (* stolen from state from state lib *)
-    open HolKernel boolLib bossLib
-    open stateLib spec_databaseLib m0_progTheory
-
-    val m0_proj_def = m0_progTheory.m0_proj_def
-    val m0_comp_defs = m0_progTheory.component_defs
-
-
-    val m0_select_state_thms =
-    List.map (fn t => stateLib.star_select_state_thm m0_proj_def [] ([], t))
-		m0_comp_defs
-
-    val m0_select_state_pool_thm =
-    utilsLib.map_conv
-	(pool_select_state_thm m0_proj_def [] o
-	utilsLib.SRW_CONV
-	    [pred_setTheory.INSERT_UNION_EQ, stateTheory.CODE_POOL, m0_instr_def])
-	[``CODE_POOL m0_instr {(pc, INL opc)}``,
-	``CODE_POOL m0_instr {(pc, INR opc)}``]
 *)
+    (* stolen from state from state lib *)
+open HolKernel boolLib bossLib;
+open stateLib spec_databaseLib m0_progTheory;
+
+
+val m0_proj_def = m0_progTheory.m0_proj_def;
+val m0_comp_defs = m0_progTheory.component_defs;
+
+
+val m0_select_state_thms = List.map (fn t => stateLib.star_select_state_thm m0_proj_def [] ([], t)) m0_comp_defs;
+
+val m0_select_state_pool_thm =
+utilsLib.map_conv
+    (pool_select_state_thm m0_proj_def [] o
+    utilsLib.SRW_CONV
+        [pred_setTheory.INSERT_UNION_EQ, stateTheory.CODE_POOL, m0_instr_def])
+    [``CODE_POOL m0_instr {(pc, INL opc)}``,
+    ``CODE_POOL m0_instr {(pc, INR opc)}``];
+
+
 open  wordsTheory;
 open m0Theory;
 open m0_decompLib;
 open fcpTheory;
 open m0_progLib;
 
+
 (** separation logic simplification **)
 
 val SEP_CONV =  let 
-    val PULL_CODE_POOL = ONCE_REWRITE_CONV [set_sepTheory.STAR_COMM] ``x * CODE_POOL inst c``;
-    val CODE_POOL_STAR = REWRITE_CONV [set_sepTheory.STAR_def] ``CODE_POOL inst c * q``;
-    val REWRITE_AND_PULL_CODE_POOL_INFRONT = SIMP_CONV (std_ss++boolSimps.LET_ss)  [
-	COUNT_STEPS_def, m0_decompTheory.m0_COUNT_def,
-        m0_progTheory.m0_PC_def, m0_progTheory.m0_PC_def,
-	m0_progTheory.M0_MODEL_def, progTheory.SEP_REFINE_def,
-	PULL_CODE_POOL, stateTheory.NEXT_REL_EQ];
-    val REWRITE_CODE_POOL = SIMP_CONV std_ss [
-        GSYM set_sepTheory.STAR_ASSOC, CODE_POOL_STAR,
+    val PULL_CODE_POOL = ONCE_REWRITE_CONV [set_sepTheory.STAR_COMM] ``x * CODE_POOL inst c``
+    val CODE_POOL_STAR = REWRITE_CONV [set_sepTheory.STAR_def] ``CODE_POOL inst c * q``
+    val refine = SIMP_CONV (std_ss) [
+        m0_progTheory.M0_MODEL_def, progTheory.SEP_REFINE_def,
+        stateTheory.NEXT_REL_EQ,
+        stateTheory.FRAME_STATE_def,
+        m0_CONFIG_def,
+        m0_progTheory.m0_PC_def]
+    val PULL_RWR_CODE_POOL = SIMP_CONV (std_ss++boolSimps.LET_ss)  [
+	PULL_CODE_POOL, GSYM set_sepTheory.STAR_ASSOC, CODE_POOL_STAR,
         stateTheory.SPLIT_STATE, m0_select_state_pool_thm,
-        PULL_EXISTS];
-    val REWRITE_REST = SIMP_CONV (std_ss++pred_setLib.PRED_SET_ss) (
-	GSYM CONJ_ASSOC :: GSYM set_sepTheory.STAR_ASSOC ::
-	stateTheory.STATE_def :: m0_component_distinct ::
-	set_sepTheory.SEP_T_def :: m0_CONFIG_def ::
-	set_sepTheory.cond_STAR :: stateTheory.FRAME_STATE_def ::
-	m0_select_state_thms);
-in 
-    REWRITE_AND_PULL_CODE_POOL_INFRONT THENC
-    REWRITE_CODE_POOL THENC
-    REWRITE_REST
-end
+        PULL_EXISTS]
+    val PUSH_SEP_T = SIMP_CONV std_ss [
+        ONCE_REWRITE_CONV [set_sepTheory.STAR_COMM] ``SEP_T * x``,
+        ONCE_REWRITE_CONV [set_sepTheory.STAR_COMM] ``SEP_T * (x * y)``]      
+    val PULL_COND1 = ONCE_REWRITE_CONV [set_sepTheory.STAR_COMM] ``x * cond y``
+    val PULL_COND2 = ONCE_REWRITE_CONV [set_sepTheory.STAR_COMM] ``w * (cond y * x)``
+    val PULL_COND_CONV = 
+        SIMP_CONV std_ss [ PULL_COND1, PULL_COND2, GSYM set_sepTheory.STAR_ASSOC]
+        THENC SIMP_CONV std_ss [set_sepTheory.cond_STAR]
+in refine
+    THENC PULL_RWR_CODE_POOL
+    THENC PULL_COND_CONV
+    THENC PUSH_SEP_T
+     THENC SIMP_CONV (std_ss++pred_setLib.PRED_SET_ss) ( m0_component_distinct :: stateTheory.FRAME_STATE_def::set_sepTheory.SEP_T_def::(GSYM set_sepTheory.STAR_ASSOC)::m0_select_state_thms)
+    THENC SIMP_CONV std_ss [GSYM boolTheory.CONJ_ASSOC]
+end;
+
+(*  
 
 (* tying to make a more general version *)
 val ReduceToSingeltonSets=  prove( 
@@ -187,16 +195,7 @@ ev_h "b5f0"
 COUNT_CONV "b5f0" `` !p. COUNT_STEP (m0_PC p  ) {(p,INL 0xb5f0w)} 6``
 COUNT_CONV "bdfe" `` !p. COUNT_STEP (m0_PC p  ) {(p,INL 0xbdfew)} 12``
 
-val COUNT_STEPS_def = Define `
-COUNT_STEP P C count =
-let
- (to_set,next,instr,less,allow) = M0_MODEL;   
-   refine p s= SEP_REFINE p less to_set s   
-in !s s' c0.
-    next s s' /\ 
-    refine (m0_COUNT c0 * SEP_T) s /\ 
-    refine (P * CODE_POOL instr C * SEP_T) s ==> 
-            refine (m0_COUNT (c0+count) * SEP_T)  s' `;
+
 
 
 (* MY attempt to dervie a step theorem before i found the existing tools *)
@@ -1292,3 +1291,4 @@ in
    val m0_spec_code = List.map m0_spec_hex o
                       (m0AssemblerLib.m0_code: string quotation -> string list)
 			  
+*)
