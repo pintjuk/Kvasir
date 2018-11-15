@@ -257,7 +257,7 @@ val RunM0_def = Define `(RunM0 s 0n = s) /\
                            then Next(s')
                            else s')`;
 
-(*
+
 val RunM0_SEQUENCE_THM = prove(
 ``! s seq.
   (rel_sequence (NEXT_REL $= NextStateM0) seq s)  <=> (seq = (RunM0 s))``,
@@ -281,7 +281,7 @@ val RunM0_SEQUENCE_THM = prove(
     REPEAT STRIP_TAC >-  
     (SIMP_TAC std_ss [RunM0_def])>>
     IF_CASES_TAC>> ASM_SIMP_TAC (arith_ss++LET_ss) [RunM0_def, DECIDE ``n+1=SUC n``]
-);*)
+);
 
 
 val SEQUENCE_EXISTS_THM = Q.store_thm(
