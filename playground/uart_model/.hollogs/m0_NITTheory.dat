@@ -1,0 +1,39 @@
+Specializing fetch: 2 -> 2(2)
+Specializing decode Thumb: 83 -> 83(83)
+Specializing decode Thumb-2: 1 -> 1(1)
+Specializing decode Thumb (fallback): 1 -> 1(1)
+Specializing decode Thumb-2 (fallback): 1 -> 1(1)
+Specializing eval: 72 -> 72(72)
+Specializing eval: 72 -> 72(72)
+<<HOL message: Created theory "m0_NIT">>
+Saved definition __ "mem_eq_def"
+Saved definition __ "m0_r_eq_def"
+Saved definition __ "m0_non_r_eq_def"
+Saved definition __ "NIT_STEP_to_def"
+Saved definition __ "NIT_STEP_from_def"
+Saved definition __ "NIT_STEP_def"
+Saved theorem _____ "NIT_STEP_thm"
+Saved definition __ "NIT_W_def"
+Saved definition __ "NIT_def"
+Saved CHEAT _______ "NIT_NIT_STEP_thm"
+Saved theorem _____ "mem_eq_refl_thm"
+Saved theorem _____ "mem_eq_antisym_thm"
+Saved theorem _____ "mem_eq_trans_thm"
+Saved theorem _____ "m0_r_eq_refl_thm"
+Saved theorem _____ "m0_non_r_eq_refl_thm"
+Saved theorem _____ "m0_r_eq_antisym_thm"
+Saved theorem _____ "m0_non_r_eq_antisym_thm"
+Saved theorem _____ "m0_non_r_eq_trans_thm"
+Saved theorem _____ "m0_r_eq_trans_thm"
+Saved theorem _____ "NIT_STEP_TRANS_thm"
+<<HOL warning: GrammarDeltas.revise_data: 
+  Grammar-deltas:
+    overload_on("RunM0_tupled")
+  invalidated by DelConstant(m0_NIT$RunM0_tupled)>>
+Saved theorem _____ "RunM0_def_compute"
+Saved definition __ "RunM0_def"
+Saved induction ___ "RunM0_ind"
+Saved theorem _____ "SEQUENCE_EXISTS_THM"
+Saved definition __ "uart_region_def"
+Exporting theory "m0_NIT" ... done.
+Theory "m0_NIT" took 1.4s to build

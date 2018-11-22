@@ -494,7 +494,7 @@ val NEX_def = Define `
     NEX (P :(m0_component # m0_data -> bool) -> bool) t = ! s seq i.    
                ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
                rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
-               ((seq (SUC i)).count <= s.count+ t))==>   
+               ((seq (i)).count < s.count+ t))==>   
 	           ((seq i).count < (Next(seq i)).count) /\
                    ((Next (seq (i))).exception = NoException) `;
 

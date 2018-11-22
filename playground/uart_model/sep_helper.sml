@@ -12,12 +12,14 @@ struct
 
     open HolKernel boolLib bossLib;
     open stateLib spec_databaseLib m0_progTheory;
+
     open wordsTheory;
     open m0Theory;
     open m0_decompLib;
     open fcpTheory;
     open m0_progLib;
-
+    
+    
     val m0_proj_def = m0_progTheory.m0_proj_def;
     val m0_comp_defs = m0_progTheory.component_defs;
     val m0_select_state_thms = List.map (fn t =>
@@ -95,6 +97,94 @@ DB.find  "SEP_EQ_STAR"
 val GET_THM = (fst o snd o hd o DB.find);
 
 open m0_stepLib
+print_instructions()
+
+all_instr [
+"ADD",
+"ADD (pc)",
+"ADD (sp)",
+"ADD (sp,sp)",
+"ADDS",
+"ADDS (imm)",
+"ADDS (imm3)",
+"ANDS",
+"ASRS",
+"ASRS (imm)",
+"B",
+"BCC",
+"BCS",
+"BEQ",
+"BGE",
+"BGT",
+"BHI",
+"BICS",
+"BL",
+"BLE",
+"BLS",
+"BLT",
+"BLX",
+"BMI",
+"BNE",
+"BPL",
+"BVC",
+"BVS",
+"BX",
+"CMN",
+"CMP",
+"CMP (high)",
+"CMP (imm)",
+"EORS",
+"LDM",
+"LDR",
+"LDR (imm)",
+"LDR (lit)",
+"LDR (sp)",
+"LDRB",
+"LDRB (imm)",
+"LDRH",
+"LDRH (imm)",
+"LDRSB",
+"LDRSH",
+"LSLS",
+"LSLS (imm)",
+"LSRS",
+"LSRS (imm)",
+"MOV",
+"MOV (pc)",
+"MOVS",
+"MULS",
+"MVNS",
+"NOP",
+"ORRS",
+"POP",
+"POP (pc)",
+"PUSH",
+"REV",
+"REV16",
+"REVSH",
+"RORS",
+"RSBS",
+"SBCS",
+"STM",
+"STR",
+"STR (imm)",
+"STR (sp)",
+"STRB",
+"STRB (imm)",
+"STRH",
+"STRH (imm)",
+"SUB (sp,sp)",
+"SUBS",
+"SUBS (imm)",
+"SUBS (imm3)",
+"SXTB",
+"SXTH",
+"TST",
+"UXTB",
+"UXTH"]
+
+ev "TST"
+
      val () = print_instructions ()
      val ev = thumb_step (false, false)
      val ev_code = thumb_step_code (true, true)

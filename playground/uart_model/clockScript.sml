@@ -8,50 +8,12 @@ open boolSimps;
 val _ = new_theory "clock"
 
 (* next is strictly monotonically increasing in clock cycles *)
-(*		  
-    REPEAT STRIP_TAC 
-    Q.ABBREV_TAC `sf = Next s`
-    FULL_SIMP_TAC (std_ss++LET_ss) [Next_def]
-    Q.ABBREV_TAC `s1 = Fetch s`>>
-    Cases_on `s1`>>
-    FULL_SIMP_TAC (std_ss++LET_ss) [Next_def]>>
-    Q.ABBREV_TAC `s2 = Decode q r`
-    Cases_on `s2`
-`(!x. inst<> Undefined x) ==> s.count < (Run inst s).count` by cheat
-`!x. (inst= Undefined x) ==>  ((Run inst s).pending=(SOME HardFault))` by cheat
-
-    FULL_SIMP_TAC (std_ss++LET_ss) [Run_def]>>
-
-    Cases_on `q'`>>
-    (
-FULL_SIMP_TAC (std_ss++LET_ss) [instruction_case_def, BranchTo_def,						IncPC_def, write'PC_def,
-dfn'Undefined_def,
-Raise_def,
-dfn'NoOperation_def]
-    )
-);
-*)
-(*
+		  
 val  NEXT_MONO = Q.store_thm("NEXT_MONO",
 `!s. s.count <= (Next s).count`,
-    cheat);
-SIMP_TAC std_ss [Next_def]
-DB.find "DecodeThumb_def"
-DB.find "dnf'NO"
-EVAL ``ARB+1n``
-
-DB.find "Run_def"
-DB.find "unpredictable"
-DB.find "dfn'BranchExchange"
-(* also works thus far:  
-`!s. s.count <= (Next s).count`,
-*)
+cheat
 );
-				
-DB.find "Exception"
-ExceptionEntry
-ExceptionTaken
-ExceptionReturn
+
 
 (*
 execution sequences are strictly monotonically increasing
@@ -95,7 +57,7 @@ val SEQ_MONO_B = Q.store_thm("SEQ_MONO_B",
     MP_TAC (Q.SPECL [`s`, `a`, `b-a`, `seq`] SEQ_MONO2)>>
     FULL_SIMP_TAC arith_ss []
 );
-
+(*
 val SEQ_UNIQUE1 = Q.prove(
 `!s i seq. rel_sequence (NEXT_REL $= NextStateM0) seq s /\ ( (seq i).count = (seq (i+1)).count)  ==>
 (seq i = seq (i+1))
@@ -139,5 +101,7 @@ val SEQ_MONO = Q.store_thm("SEQ_UNIQUE",
 	`b+(a-b)=a` by DECIDE_TAC>>
 	ASM_SIMP_TAC std_ss[]
     ]
-);*)
+);
+
+*)
 val _ = export_theory();

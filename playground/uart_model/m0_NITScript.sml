@@ -64,8 +64,8 @@ val NIT_STEP_from_def = Define`
   !s'. m0_non_r_eq region s s'==> m0_non_r_eq region (Next s) (Next s') 
 )`;
 
-
-(* There is no flow to or from the region during the execution of next instruction.
+(*
+ is no flow to or from the region during the execution of next instruction.
    That is next instruction nether writs nor reads during the next step
 *)
 val NIT_STEP_def = Define`
@@ -106,9 +106,22 @@ NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.
                m0_non_r_eq region s s' /\ 
                rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
                rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               ((seq i).count <= s.count+t)) ==>   
+               ((seq i).count < s.count+t)) ==>   
                    m0_non_r_eq region (seq i) (seq' i) /\
-                   m0_r_eq region s' (seq' i)`;
+                   m0_r_eq region (seq' 0) (seq' i) /\ 
+                   m0_non_r_eq region (seq (SUC i)) (seq' (SUC i)) /\
+                   m0_r_eq region (seq' 0) (seq' (SUC i))
+`;
+
+
+val NIT_NIT_STEP_thm = store_thm("NIT_NIT_STEP_thm",
+``  ! P t region. 
+        NIT region P t = ! s seq i . (
+        SEP_REFINE (P * SEP_T) $= (STATE m0_proj) s /\
+        rel_sequence (NEXT_REL $= NextStateM0) seq s /\
+        (seq i).count < s.count + t ==> NIT_STEP region (seq i))``,
+        cheat
+);
 
 (********************************)
 (*   uart eqvivalance thearems  *)
@@ -121,6 +134,7 @@ val mem_eq_refl_thm = Q.store_thm("mem_eq_refl_thm",
     `!region mem. mem_eq region mem mem `,
 	 METIS_TAC[mem_eq_def]
 );
+
 val mem_eq_antisym_thm = Q.store_thm("mem_eq_antisym_thm",
     `!region mem1 mem2. 
 	(mem_eq region mem1 mem2)  = (mem_eq region mem2 mem1) `,
@@ -161,7 +175,8 @@ val m0_non_r_eq_trans_thm = Q.store_thm ("m0_non_r_eq_trans_thm",
         m0_non_r_eq region s1 s3`,
 REPEAT GEN_TAC>>
 SIMP_TAC std_ss [m0_non_r_eq_def]>>
-METIS_TAC[ mem_eq_trans_thm]);
+METIS_TAC[ mem_eq_trans_thm]
+);
 
 val m0_r_eq_trans_thm = Q.store_thm ("m0_r_eq_trans_thm",
 `!s1 s2 s3 region.
@@ -239,13 +254,11 @@ val NIF_STEP_UNION_thm = Q.store_thm ("NIF_STEP_UNION_thm",
 (*   Run & equance stuff     *)
 (*****************************)
 
-
 val M0_SEQUENCE_THM = prove(``
   !seq s. rel_sequence (NEXT_REL $= NextStateM0) seq s <=>
   (seq 0 = s) ∧ !n. if (Next(seq n)).exception = NoException 
                     then seq (n+1) = Next (seq n)
                     else seq (n+1) = seq n``,
-                            
     SIMP_TAC (std_ss++boolSimps.LET_ss++boolSimps.COND_elim_ss) [
 	DECIDE ``SUC n = n + 1n``, rel_sequence_def, NEXT_REL_EQ, NextStateM0_def]>>
     METIS_TAC[]);
@@ -256,7 +269,6 @@ val RunM0_def = Define `(RunM0 s 0n = s) /\
                         in if (Next (s')).exception = NoException 
                            then Next(s')
                            else s')`;
-
 
 val RunM0_SEQUENCE_THM = prove(
 ``! s seq.
@@ -282,7 +294,6 @@ val RunM0_SEQUENCE_THM = prove(
     (SIMP_TAC std_ss [RunM0_def])>>
     IF_CASES_TAC>> ASM_SIMP_TAC (arith_ss++LET_ss) [RunM0_def, DECIDE ``n+1=SUC n``]
 );
-
 
 val SEQUENCE_EXISTS_THM = Q.store_thm(
     "SEQUENCE_EXISTS_THM",
