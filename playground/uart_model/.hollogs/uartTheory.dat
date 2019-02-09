@@ -1,5 +1,5 @@
 Specializing fetch: 2 -> 2(2)
-Specializing decode Thumb: 82 -> 82(82)
+Specializing decode Thumb: 83 -> 83(83)
 Specializing decode Thumb-2: 1 -> 1(1)
 Specializing decode Thumb (fallback): 1 -> 1(1)
 Specializing decode Thumb-2 (fallback): 1 -> 1(1)
@@ -79,4 +79,4 @@ Saved definition __ "m0u_Next_def"
 Saved definition __ "NEX_def"
 Saved theorem _____ "AXI"
 Exporting theory "uart" ... done.
-Theory "uart" took 2.7s to build
+Theory "uart" took 3.3s to build

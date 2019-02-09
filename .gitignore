@@ -1,3 +1,8 @@
+## hol
+
+*.dat
+*.ui
+*.uo
 ### C ###
 
 # more vim and emacs stuff
@@ -421,3 +426,24 @@ tags
 /playground/uart_model/uartTheory.ui
 /playground/uart_model/uartTheory.uo
 /playground/uart_model/.hollogs/m0_NITTheory.sig
+/playground/uart_model/.hollogs/*
+/playground/uart_model/nit1/.HOLMK/lastmaker
+/playground/uart_model/nit1/.hollogs/m0_NITTheory.sml
+/playground/uart_model/nit1/m0_NITTheory.sig
+/playground/uart_model/nit1/m0_NITTheory.sml
+/playground/uart_model/uart/.HOLMK/lastmaker
+/playground/uart_model/uart/.hollogs/uartTheory.sml
+/playground/uart_model/uart/uartTheory.sig
+/playground/uart_model/uart/uartTheory.sml
+/playground/uart_model/helpers/.HOLMK/lastmaker
+/playground/uart_model/prog/.HOLMK/lastmaker
+/playground/uart_model/prog/.hollogs/m0u_progTheory.sml
+/playground/uart_model/prog/m0u_progTheory.sig
+/playground/uart_model/prog/m0u_progTheory.sml
+/playground/uart_model/spec_lift/.HOLMK/lastmaker
+/playground/uart_model/spec_lift/.hollogs/clockTheory.sml
+/playground/uart_model/spec_lift/.hollogs/spec_liftTheory.sml
+/playground/uart_model/spec_lift/clockTheory.sig
+/playground/uart_model/spec_lift/clockTheory.sml
+/playground/uart_model/spec_lift/spec_liftTheory.sig
+/playground/uart_model/spec_lift/spec_liftTheory.sml
