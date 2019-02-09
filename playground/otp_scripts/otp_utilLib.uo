@@ -14,6 +14,6 @@ $(HOLDIR)/sigobj/pairTheory
 $(HOLDIR)/sigobj/pred_setLib
 $(HOLDIR)/sigobj/wordsLib
 $(HOLDIR)/sigobj/wordsTheory
-/home/luceat/Documents/skola/exjobb/Kvasir/playground/otp_scripts/otp_utilLib
-/home/luceat/Documents/skola/exjobb/Kvasir/playground/otp_scripts/otp_utilLib
-/home/luceat/Documents/skola/exjobb/Kvasir/playground/otp_scripts/otp_utilLib.sml
+/home/daniil/projects/Kvasir/playground/otp_scripts/otp_utilLib
+/home/daniil/projects/Kvasir/playground/otp_scripts/otp_utilLib
+/home/daniil/projects/Kvasir/playground/otp_scripts/otp_utilLib.sml

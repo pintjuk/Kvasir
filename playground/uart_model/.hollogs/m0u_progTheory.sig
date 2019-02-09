@@ -46,4 +46,4 @@ Saved definition __ "cosim_def"
 Saved theorem _____ "NEX_thm"
 Saved CHEAT _______ "NIT_COSIM_thm"
 Exporting theory "m0u_prog" ... done.
-Theory "m0u_prog" took 2.3s to build
+Theory "m0u_prog" took 2.6s to build

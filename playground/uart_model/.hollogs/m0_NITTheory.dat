@@ -36,4 +36,4 @@ Saved induction ___ "RunM0_ind"
 Saved theorem _____ "SEQUENCE_EXISTS_THM"
 Saved definition __ "uart_region_def"
 Exporting theory "m0_NIT" ... done.
-Theory "m0_NIT" took 1.4s to build
+Theory "m0_NIT" took 2.4s to build
