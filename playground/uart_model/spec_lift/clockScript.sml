@@ -5,7 +5,63 @@
 open HolKernel Parse boolLib bossLib;
 open m0Theory progTheory m0_progTheory stateTheory m0_stepTheory;
 open boolSimps;
-val _ = new_theory "clock"
+ val _ = new_theory "clock"
+
+val lem1 =prove(`` (Fetch s = (q,r)) ==> (s.count <= r.count) ``,cheat);
+val lem2 =prove(`` (Decode q r = (q',r')) ==> (r.count <= r'.count) ``,cheat);
+val simpAll =  ((DB.find "dfn'") |> map (fst o snd ) |> fs  )>>
+    fs[m0Theory.CallSupervisor_def, m0Theory.Raise_def, Raise'_def]
+(* clock count in rel_sequance ether increeses monotonically, or execution stals  *)
+    
+val NEX_MONO  = Q.store_thm("NEX_MONO",`!s. (s.count < (Next s).count) 
+                    \/ ( (Next s).exception <> NoException)`,
+    strip_tac>>
+    Q.ABBREV_TAC `s'= Next s`>>
+    fs[m0Theory.Next_def, m0Theory.Run_def]>>
+    Cases_on `Fetch  s`>>
+    Cases_on `Decode q r`>>
+
+    REVERSE(
+    Cases_on `q'`>>  simpAll) >-(
+            (* undefined instruction *)
+            Q.UNABBREV_TAC `s'` >>
+            Cases_on `r'.exception = NoException`>>
+            fs[m0Theory.m0_state_accfupds]
+
+    )>>
+            (* rest *)
+            cheat
+    (*         
+
+    Cases_on `S'`>> simpAll  >-(
+        Cases_on `CurrentModeIsPrivileged () r'`>>fs[IncPC_def] >> simpAll
+        ) *)
+);
+
+
+val SEQ_MONO_AXI = Q.store_thm("SEQ_MONO_AXI", 
+        `!s i seq. 
+            rel_sequence (NEXT_REL $= NextStateM0) seq s 
+                ==> (((seq i).count < (seq (i+1)).count) 
+                    \/ ((seq i)=(seq (i+1))))`,
+    REPEAT strip_tac>>
+    fs[rel_sequence_def, NEXT_REL_def, NextStateM0_def]>>
+    (` 
+                if (Next (seq i)).exception = NoException then
+                Next (seq i) = seq (SUC i)
+                else seq (SUC i) = seq i
+    ` by METIS_TAC[])>>
+
+    Tactical.REVERSE(Cases_on `(Next (seq i)).exception = NoException`>> fs[])>-(
+            fs[DECIDE``i+1=SUC i``, NEX_MONO]
+    )>>
+    DISJ1_TAC>>
+    fs[DECIDE``i+1=SUC i``, NEX_MONO]>>
+    METIS_TAC[NEX_MONO]
+);
+
+    
+                   
 
 (* next is strictly monotonically increasing in clock cycles *)
 (*		  
