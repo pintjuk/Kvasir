@@ -128,7 +128,7 @@ val UART_def = Define`
 
 (* Domain of separation logic expression *)
 val m0_DOM_def = Define`
-    DOM (A:(m0_component # m0_data -> bool) -> bool) = (BIGUNION (IMAGE (IMAGE (FST)) A))
+    DOM A = (BIGUNION (IMAGE (IMAGE (FST)) A))
 `;
 
 val m0_DOM_STAR_thm = store_thm("m0_SDOM_STAR_thm", ``

@@ -175,6 +175,19 @@ val NIT_COSIM_thm = Q.store_thm ("NIT_COSIM_thm",
     METIS_TAC [m0u_r_eq_trans_thm,  m0u_r_eq_antisym_thm]
 );
 
+val WS_COSIM_thm = Q.store_thm("WS_COSIM_thm",
+    `!P P' t t'. COSIM P t /\ t' < t  /\ (SEP_IMP P' P) ==> COSIM P' t'`,
+    SIMP_TAC arith_ss [COSIM_def, PULL_FORALL]>>
+    REPEAT STRIP_TAC>>(
+	Q.PAT_X_ASSUM `!s s' seq seq' i._` (MP_TAC o Q.SPECL [`s`, `s'`, `seq`, `seq'`, `i`] )>>
+	REPEAT STRIP_TAC>>
+	` (seq i).count ≤ t+s.count` by DECIDE_TAC>>
+	`SEP_REFINE (P * SEP_T) $= (STATE m0_proj) s` by (
+	REV_FULL_SIMP_TAC std_ss [SEP_IMP_def, STAR_def,SEP_REFINE_def]>>
+	METIS_TAC [])>>
+	METIS_TAC []
+    )
+);
 (********************************************)
 (*          Transfere properties            *)
 (*                                          *)
@@ -213,19 +226,131 @@ FULL_SIMP_TAC std_ss [cosim_def, COSIM_def]>>
         (DISJOINT (DOM Q) UART) ==>
     REPEAT STRIP_TAC
     cheat);*)
-
-val WS_COSIM_thm = Q.store_thm("WS_COSIM_thm",
-    `!P P' t t'. COSIM P t /\ t' < t  /\ (SEP_IMP P' P) ==> COSIM P' t'`,
-    SIMP_TAC arith_ss [COSIM_def, PULL_FORALL]>>
-    REPEAT STRIP_TAC>>(
-	Q.PAT_X_ASSUM `!s s' seq seq' i._` (MP_TAC o Q.SPECL [`s`, `s'`, `seq`, `seq'`, `i`] )>>
-	REPEAT STRIP_TAC>>
-	` (seq i).count ≤ t+s.count` by DECIDE_TAC>>
-	`SEP_REFINE (P * SEP_T) $= (STATE m0_proj) s` by (
-	REV_FULL_SIMP_TAC std_ss [SEP_IMP_def, STAR_def,SEP_REFINE_def]>>
-	METIS_TAC [])>>
-	METIS_TAC []
-    )
+val m0_MEM_DOM_thm = store_thm("m0_MEM_DOM_thm",``(DOM (m0_MEM a b)) = {m0_c_MEM a}``,
+fs[m0_MEM_def, DOM_def] 
 );
 
+val m0_MEM_UART_DISJOINT_thm = store_thm("m0_MEM_UART_DISJOINT_thm",
+    ``a NOTIN uart_r <=> ( DISJOINT (DOM (m0_MEM a b)) UART)``,
+fs[m0_MEM_DOM_thm, UART_def, r2m0_c_set_def, uart_r_def]
+);
+val m0_MEMORY_DOM_thm = store_thm("m0_MEMORY_DOM_thm",``(DOM (m0_MEMORY dm m)) = {m0_c_MEM c| c IN dm}``,
+    fs[m0_MEMORY_def, m0_MEM_def,DOM_def, FST]>>
+    REWRITE_TAC [FUN_EQ_THM] >> STRIP_TAC>>
+    EQ_TAC>|[
+        fs[]>>STRIP_TAC>>
+          Q.EXISTS_TAC `c` >> fs[]
+    ,
+            fs[]>>STRIP_TAC>>
+        Q.EXISTS_TAC `(x, m0_d_word8 (m c))`>> fs[] >>
+        Q.EXISTS_TAC `{(m0_c_MEM c,m0_d_word8 (m c))}`>> fs[]
+    ]
+);
+
+val m0_MEMORY_UART_DISJOINT_thm = store_thm("m0_MEMORY_UART_DISJOINT_thm",
+    ``(DISJOINT dm uart_r) <=> ( DISJOINT(DOM (m0_MEMORY dm m)) UART)``,
+fs[GEN_ALL m0_MEMORY_DOM_thm, UART_def, r2m0_c_set_def, m0_component_11, uart_r_def, ward_region_def]
+
+);
+
+
+val m0_REG_DOM_thm = store_thm("m0_REG_DOM_thm",``(DOM (m0_REG a b)) = {m0_c_REG a}``,
+fs[m0_REG_def, DOM_def] 
+);
+
+val m0_REG_UART_DISJOINT_thm = store_thm("m0_REG_UART_DISJOINT_thm",
+    ``DISJOINT (DOM (m0_REG k v)) UART``,
+    fs[m0_REG_DOM_thm , UART_def, r2m0_c_set_def]);
+
+
+val m0_STAR_UART_DISJOINT_thm = store_thm("m0_REG_UART_DISJOINT_thm",
+    ``((DOM (A*B)) INTER UART = {})<=> (((DOM (A)) INTER UART = {}) /\ ((DOM (B)) INTER UART = {}))``,cheat);
+
+ val m0_MEMORY_UART_DIFF_DISJOINT_thm = store_thm("m0_MEMORY_DIFF_UART_DISJOINT_thm",
+    ``((DOM (m0_MEMORY (dm DIFF uart_r) m)) INTER UART = {})``,cheat);
+
+val m0_MEMORY_SPLIT_thm = store_thm("m0_MEMORY_SPLIT_thm", 
+    `` m0_MEMORY dm m = (m0_MEMORY (dm DIFF s) m) *  (m0_MEMORY s m)``,cheat);
+
+
+(** update subdomain of function **)
+
+val dupdate_def = Define`
+dupdate dm new old = (\x. if x IN dm then (new x) else (old x))`;
+
+val m0_MEMORY_UPDATE_MEM_SELECT_thm = store_thm("m0_MEMORY_UPDATE_MEM_SELECT_thm",``(m0_MEMORY dm m)(SELECT_STATE m0_proj (r2m0_c_set dm) (s with MEM updated_by dupdate dm m))``,cheat);
+
+val m0_MEMORY_UPDATE_MEM_SELET_UART_thm = store_thm("m0_MEMORY_UPDATE_MEM_SELET_UART_thm",
+``(m0_MEMORY uart_r m)(SELECT_STATE m0_proj (UART) (s with MEM updated_by dupdate uart_r m))``, 
+fs[ m0_MEMORY_UPDATE_MEM_SELECT_thm,UART_def]);
+
+
+
+val m0u_m0_non_r_eq_invariant = store_thm("m0u_m0_non_r_eq_invariant", 
+``m0u_m0_non_r_eq uart_r (state:((m0_state # uart_state) # word32 list # word32 list)) (((state:>FST:>FST)with MEM updated_by dupdate uart_r m ) )``, cheat);
+
+
+val m0u_UART_def = Define` m0u_UART =  IMAGE m0_c UART`;
+
+val sep_expr_split = store_thm("sep_expr_split",
+`` !(F :(m0u_component # m0u_data -> bool) -> bool) .?F_r F_u. (F  = (F_r * F_u) )/\ ( (DOM F_u) SUBSET m0u_UART) /\ ( (DOM F_r) SUBSET (COMPL m0u_UART))``,
+cheat);
+
+val existsy_m0_prop = store_thm("exists_m0_prop",
+`` 
+ !F_r. ( (DOM F_r) SUBSET (COMPL m0u_UART)) ==> ?F'_r. F_r = TO_M0U_PROP F'_r
+
+``,
+cheat);
+
+val seq_exists = prove(``!s .?seq. rel_sequence (NEXT_REL $= NextStateM0) seq s``,
+                       cheat
+);
+(*
+``SPEC M0_MODEL (P* m0_MEMORY uart_r m *(m0_count t0))  code (Q*m0_MEMORY uart_r m' * m0_count (t0+t))/\ 
+        (cosim (P* m0_MEMORY uart_r m *(m0_count t0)) code t) /\
+(DISJOINT (DOM P) UART)/\
+(DISJOINT (DOM Q) UART) ==> 
+(SPEC M0U_MODEL (TO_M0U_PROP (P * m0_count t0)) code (TO_M0U_PROP(Q * m0_count (t0+t))))
+``,
+
+
+    fs [ SPEC_def, M0U_MODEL_def, M0_MODEL_def, RUN_def , SEP_REFINE_def, STATE_def]>>
+    STRIP_TAC>>
+    REPEAT GEN_TAC>> 
+    rename1 `(CODE_POOL m0u_instr code * TO_M0U_PROP (P * m0_count t0) * r)
+            (SELECT_STATE m0u_proj 𝕌(:m0u_component)  s0') `>>
+
+    REPEAT STRIP_TAC >>
+    rename1 `rel_sequence (NEXT_REL $= NextStateM0U) seq' s0'`>>
+    MP_TAC ( m0u_m0_non_r_eq_invariant |> GEN_ALL |> Q.SPECL [`s0'`, `m`])>>
+    Q.ABBREV_TAC `s_0 = ((s0' :> FST :> FST) with MEM updated_by dupdate uart_r m)` >>
+    strip_tac>>
+    mp_tac ( 
+        sep_expr_split |> (Q.SPECL [` (r :(m0u_component # m0u_data -> bool) -> bool)`]))>>
+   
+    STRIP_TAC>>
+
+    MP_TAC (existsy_m0_prop|> Q.SPECL [`F_r`]) >> fs[]>> STRIP_TAC>>
+    Q.PAT_X_ASSUM  `!state r._` (MP_TAC o Q.SPECL[`s_0`, `F'_r * SEP_T`] )>>
+    strip_tac>>
+
+   `(CODE_POOL m0_instr code * (P * m0_MEMORY uart_r m * m0_count t0) *
+          (F'_r * SEP_T)) (SELECT_STATE m0_proj 𝕌(:m0_component) s_0)` by cheat>>
+    fs[]>>
+    MP_TAC (seq_exists|> Q.SPECL [`s_0`])>>strip_tac>>
+    Q.PAT_X_ASSUM  `!seq._` (MP_TAC o Q.SPECL[`seq`] )>> fs[]>>
+    strip_tac>>
+    Q.EXISTS_TAC `i`>>
+
+    `(s0).count= t` by cheat >>
+    `(seq i).count= t+t0` by cheat >>
+    `(seq i).count=s0.count+t`by cheat>>
+  Q.PAT_X_ASSUM `cosim _ _ _` (MP_TAC o Q.SPECL [`s0`, `s0'`, `seq`, `seq'`, `i`] 
+                                      o  SIMP_RULE std_ss [cosim_def,COSIM_def]   )>>
+   fs[SEP_REFINE_def] 
+
+   Q.SPECL [`p`,`b`,`(STATE m0_proj s0)`] ( prove(``!p b s. ( p * b) s  ==> (p * SEP_T) s``, cheat))
+  
+*)
 val _ = export_theory();
