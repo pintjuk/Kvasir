@@ -110,6 +110,48 @@ NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
 
+(*
+val NIT_SS_def = Define`
+!region P t. NIT_SS region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.   
+               ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
+               m0_non_r_eq region s s' /\ 
+               rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
+               rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
+               ((seq (SUC i)).count <= s.count+t)) ==>   
+                   m0_non_r_eq region (seq (SUC i)) (seq' (SUC i)) /\
+                   m0_r_eq region (seq' i) (seq' (SUC i))`;
+
+val NIT_SS_thm = store_thm("NIT_NIT_SS_thm", 
+``! reg P t. NIT reg P t ==>  NIT_SS reg P t``,
+
+    fs[NIT_def,NIT_SS_def, rel_sequence_def]>>
+    REPEAT strip_tac>>
+    Induct_on  `i`>> fs[]>-(
+        Q.PAT_X_ASSUM `! seq seq' i . _ `  ( MP_TAC o (Q.SPECL [`seq`,`seq'`,`1`]))>>
+        METIS_TAC[]
+    )>>
+    
+    Q.PAT_ASSUM `! seq seq' i . _ `  ( MP_TAC o (Q.SPECL [`seq`,`seq'`,`SUC (SUC i)`]))>>
+    Q.PAT_X_ASSUM `! seq seq' i . _ `  ( MP_TAC o (Q.SPECL [`seq`,`seq'`,`i`]))>>
+    `(seq (SUC i)).count ≤ t + (seq 0).count` by cheat>>
+    `(seq i).count ≤ t + (seq 0).count` by cheat>>
+    fs[]>>
+    METIS_TAC[m0_r_eq_trans_thm,  m0_r_eq_antisym_thm ]
+   );
+
+
+NIT_STEP_thm
+    
+``∀region s.
+         NIT_STEP region s ⇔
+         ∀s'.
+             rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
+
+               rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
+             m0_non_r_eq region s s' ⇒
+             m0_non_r_eq region (Next s) (Next s') ∧
+             m0_r_eq region s' (Next s')``
+*)
 (********************************)
 (*   uart eqvivalance thearems  *)
 (********************************)
