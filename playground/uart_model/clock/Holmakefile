@@ -5,9 +5,6 @@ INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/examples/l3-machine-code/m0/step \
            $(HOLDIR)/examples/l3-machine-code/m0/prog \
            $(HOLDIR)/examples/l3-machine-code/common \
-           ../nit1 \
-           ../uart \
-           ../prog \
-           ../clock \
+           ../nit1
 
 

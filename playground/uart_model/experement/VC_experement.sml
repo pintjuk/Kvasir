@@ -1,6 +1,9 @@
 (*
     loadPath := ("/home/daniil/Apps/HOL/examples/l3-machine-code/m0/decompiler"::(!loadPath));
     loadPath := ("/Home/daniil/Apps/HOL/examples/l3-machine-code/common"::(!loadPath));
+    loadPath := ("/home/daniil/projects/Kvasir/playground/uart_model/helpers"::(!loadPath));
+    loadPath := ("/home/daniil/projects/Kvasir/playground/uart_model/nit2bisim"::(!loadPath));
+    loadPath := ("/home/daniil/projects/Kvasir/playground/uart_model/prog"::(!loadPath));
 *)
 structure nit_prover = 
 struct 
@@ -74,7 +77,7 @@ struct
 
     (* next state theorem *) 
 
-
+code_th code_defs
 
     val (code_th, code_defs) = m0_decompile "code"` 
     00c0   (* lsls r0, r0, #3      *)
@@ -128,6 +131,7 @@ struct
     val nexGOAL = mk_comb(mk_comb( ``NEX``, pre), stepCount)
 
     val nexTHMexp = (REWRITE_CONV [uartTheory.NEX_def]) nexGOAL
+
 
     ``∀s seq i count.
             SEP_REFINE

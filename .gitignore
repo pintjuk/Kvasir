@@ -447,3 +447,12 @@ tags
 /playground/uart_model/spec_lift/clockTheory.sml
 /playground/uart_model/spec_lift/spec_liftTheory.sig
 /playground/uart_model/spec_lift/spec_liftTheory.sml
+/playground/uart_model/clock/.HOLMK/lastmaker
+/playground/uart_model/clock/.hollogs/clockTheory.sml
+/playground/uart_model/clock/clockTheory.sig
+/playground/uart_model/clock/clockTheory.sml
+/playground/uart_model/nit2bisim/.hollogs/bisim1Theory.sml
+/playground/uart_model/nit2bisim/.hollogs/bisim2Theory.sml
+/playground/uart_model/**/*Theory.sml
+/playground/uart_model/nit2bisim/nit2bisim2Theory.sig
+/playground/uart_model/nit2bisim/nit2bisim1Theory.sig

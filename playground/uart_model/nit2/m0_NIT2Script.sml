@@ -109,33 +109,7 @@ NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.
                ((seq i).count <= s.count+t)) ==>   
                    m0_non_r_eq region (seq i) (seq' i) /\
                    m0_r_eq region s' (seq' i)`;
-                   
-(* This is our strong non interference property
-   After executing t clock cycles no information flow to or from the region can be observed
-   in each step
-*)
-val NIT2_def = Define`
-NIT region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.   
-               ((SEP_REFINE (P * SEP_T) ($=) (STATE m0_proj) s) /\
-               m0_non_r_eq region s s' /\ 
-               rel_sequence (NEXT_REL $= NextStateM0) seq  s /\
-               rel_sequence (NEXT_REL $= NextStateM0) seq' s' /\
-               ((seq i).count < s.count+t)) ==>   
-                   m0_non_r_eq region (seq i) (seq' i) /\
-                   m0_r_eq region (seq' 0) (seq' i) /\ 
-                   m0_non_r_eq region (seq (SUC i)) (seq' (SUC i)) /\
-                   m0_r_eq region (seq' 0) (seq' (SUC i))
-`;
 
-
-val NIT2_NIT_STEP_thm = store_thm("NIT_NIT_STEP_thm",
-``  ! P t region. 
-        (NEX2 region  P t ) /\ (NIT2 region P t) = ! s seq i . (
-        SEP_REFINE (P * SEP_T) $= (STATE m0_proj) s /\
-        rel_sequence (NEXT_REL $= NextStateM0) seq s /\
-        (seq i).count < s.count + t ==> NIT_STEP region (seq i))``,
-        cheat
-);
 (*
 val NIT_SS_def = Define`
 !region P t. NIT_SS region(P :(m0_component # m0_data -> bool) -> bool)  t =   !s s' seq seq' i.   

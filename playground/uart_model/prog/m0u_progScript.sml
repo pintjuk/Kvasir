@@ -169,7 +169,7 @@ val NextStateM0U_def = Define ` NextStateM0U s0 =
       (let
         s1  = m0u_Next s0
       in
-          if (~(((SND o FST)s1).unpredictable) /\ (((FST o FST)s1).exception = NoException))
+          if  (((FST o FST)s1).exception = NoException)
          then SOME s1 else NONE)`;
 
 
