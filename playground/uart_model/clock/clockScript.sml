@@ -6,17 +6,24 @@ open HolKernel Parse boolLib bossLib;
 open m0Theory progTheory m0_progTheory stateTheory m0_stepTheory;
 open boolSimps;
  val _ = new_theory "clock"
-
+(*
 val lem1 =prove(`` (Fetch s = (q,r)) ==> (s.count <= r.count) ``,cheat);
 val lem2 =prove(`` (Decode q r = (q',r')) ==> (r.count <= r'.count) ``,cheat);
+*)
+                    
 val simpAll =  ((DB.find "dfn'") |> map (fst o snd ) |> fs  )>>
     fs[m0Theory.CallSupervisor_def, m0Theory.Raise_def, Raise'_def]
+
 (* clock count in rel_sequance ether increeses monotonically, or execution stals  *)
     
 val  NEXT_MONO = Q.store_thm("NEXT_MONO",
 `!s. s.count <= (Next s).count`,
-    cheat);
-val NEX_SMONO  = Q.store_thm("NEX_MONO",`!s. (s.count < (Next s).count) 
+
+  cheat
+
+);
+
+val NEX_SMONO  = Q.store_thm("NEX_MONO",`!s.( (s.count < (Next s).count) /\ ( (Next s).exception = NoException)) 
                     \/ ( (Next s).exception <> NoException)`,
     strip_tac>>
     Q.ABBREV_TAC `s'= Next s`>>
@@ -45,8 +52,8 @@ val NEX_SMONO  = Q.store_thm("NEX_MONO",`!s. (s.count < (Next s).count)
 val SEQ_SMONO_AXI = Q.store_thm("SEQ_MONO_AXI", 
         `!s i seq. 
             rel_sequence (NEXT_REL $= NextStateM0) seq s 
-                ==> (((seq i).count < (seq (i+1)).count) 
-                    \/ ((seq i)=(seq (i+1))))`,
+                ==> ( ( (Next(seq i)).exception = NoException)/\ ((seq i).count < (seq (i+1)).count) 
+                    \/ ( ( (Next(seq i)).exception ≠ NoException) /\ ((seq i)=(seq (i+1)))))`,
     REPEAT strip_tac>>
     fs[rel_sequence_def, NEXT_REL_def, NextStateM0_def]>>
     (` 
@@ -58,20 +65,83 @@ val SEQ_SMONO_AXI = Q.store_thm("SEQ_MONO_AXI",
     Tactical.REVERSE(Cases_on `(Next (seq i)).exception = NoException`>> fs[])>-(
             fs[DECIDE``i+1=SUC i``, NEX_SMONO]
     )>>
-    DISJ1_TAC>>
     fs[DECIDE``i+1=SUC i``, NEX_SMONO]>>
     METIS_TAC[NEX_SMONO]
 );
+(*
+val SEQ_SMONO_OR_STALL_lem = Q.store_thm("SEQ_SMONO_OR_STALL_lem", 
+        `!s i a seq. 
+            rel_sequence (NEXT_REL $= NextStateM0) seq s 
+                ==> (((seq i).count < (seq (i+1)).count) 
+                    \/ ( ( (Next(seq (i +(a-1)))).exception ≠ NoException) /\ ((seq i)=(seq (i+a)))))`,
+        cheat)
+    Induct_on `a` >- 
+    (* a = 0 *)
+         METIS_TAC[ DECIDE ``(i+0n=i)/\ (i+(0n-1n)=i)``,  SEQ_SMONO_AXI] 
+    >>
+    (* inductive *)
+    REPEAT GEN_TAC>>
+    STRIP_TAC>>
+
+    `
+        (seq i).count < (seq (i + 1)).count ∨
+        (Next (seq (i + (a − 1)))).exception ≠ NoException ∧
+        (seq i = seq (a + i))    
+
+    `by METIS_TAC[] >- ( 
+        fs[] 
+    )>>
+    Q.PAT_X_ASSUM 
+    fs[DECIDE ``
+       (i + (SUC a − 1n) = i+a) /\ ( i+ SUC a = SUC (i+a))
+    ``]
+
+
+    
+    REPEAT strip_tac>>
+    fs[rel_sequence_def, NEXT_REL_def, NextStateM0_def]>>
+    (` 
+                if (Next (seq i)).exception = NoException then
+                Next (seq i) = seq (SUC i)
+                else seq (SUC i) = seq i
+    ` by METIS_TAC[])>>
+
+    Tactical.REVERSE(Cases_on `(Next (seq i)).exception = NoException`>> fs[])>-(
+            fs[DECIDE``i+1=SUC i``, NEX_SMONO]
+    )>>
+    fs[DECIDE``i+1=SUC i``, NEX_SMONO]>>
+    METIS_TAC[NEX_SMONO]
+);
+*)
 
 val SEQ_EXISTS_PREV_STATE_thm = Q.store_thm("SEQ_EXISTS_PREV_STATE_thm", 
-        `!s i seq. 
-            rel_sequence (NEXT_REL $= NextStateM0) seq s /\ (seq i).count > (seq 0).count==> ? i'. (seq i').count < (seq i).count /\ ((seq (i'+1)) = (seq i)) `,
-        cheat
+    `!s i seq. 
+        rel_sequence (NEXT_REL $= NextStateM0) seq s /\
+        (seq i).count > (seq 0).count==> 
+                ? i'. (seq i').count < (seq i).count /\ 
+                        ((seq (i'+1)) = (seq i))
+    `,
+        REPEAT STRIP_TAC>> 
+        Induct_on  `i`>-(
+            METIS_TAC [DECIDE ``x:num > x=F``] 
+        )>>
+        STRIP_TAC>>
+        Cases_on `(Next (seq (i))).exception=NoException`>-( 
+            qexists_tac  `i`>> METIS_TAC[SEQ_SMONO_AXI, DECIDE ``SUC i = i+1``]
+        )>>
+        `(seq (i)) = (seq ((SUC i)))` by METIS_TAC[SEQ_SMONO_AXI, DECIDE ``SUC i = i+1``]>>
+        `(seq i).count = (seq (SUC i)).count` by METIS_TAC[]>>
+        `(seq i).count > (seq 0).count` by DECIDE_TAC >>
+        fs []>>
+        qexists_tac  `i'`>>
+        fs []
 );
+
 (*
 execution sequences are strictly monotonically increasing
 in clock cycles
  *)
+
 val SEQ_MONO1 = Q.prove(
 `!s i seq. rel_sequence (NEXT_REL $= NextStateM0) seq s ==>  (seq i).count <= (seq (i+1)).count`,
     SIMP_TAC (std_ss++LET_ss) [rel_sequence_def,NEXT_REL_def, PULL_EXISTS, PULL_FORALL, NextStateM0_def, DECIDE ``SUC i= i+1``]>>
@@ -96,7 +166,7 @@ val SEQ_MONO2 = Q.prove(
 
 
 val SEQ_MONO_A = Q.store_thm("SEQ_MONO_A",
-`!s a b seq. rel_sequence (NEXT_REL $= NextStateM0) seq s /\  (seq a).count < (seq b).count ==> a <= b `,
+`!s a b seq. rel_sequence (NEXT_REL $= NextStateM0) seq s /\ (seq a).count < (seq b).count ==> a <= b `,
     REPEAT STRIP_TAC>>
     Cases_on `a<=b`>>(
 	ASM_SIMP_TAC std_ss [])>>
